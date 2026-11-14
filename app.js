@@ -23,7 +23,9 @@ const FOCUS = {cappuccino:'48% 48%',cheesecake:'52% 50%',cinnabon:'50% 48%',coco
 
 const MILK = [['Обычное',0],['Овсяное',60],['Кокосовое',60],['Безлактозное',40]];
 const SYRUP = [['Без сиропа',0],['Карамель',40],['Ваниль',40],['Солёная карамель',40],['Лесной орех',40]];
-const coffeeOpts = (sizes) => ({sizes, milk: MILK, syrup: SYRUP, shot: true});
+const SUGAR = [['Без сахара',0],['1 ложка',0],['2 ложки',0],['Сахар отдельно',0]];
+const TEMP = [['Обычная',0],['Погорячее',0],['Потеплее, для ребёнка',0]];
+const coffeeOpts = (sizes) => ({sizes, milk: MILK, syrup: SYRUP, sugar: SUGAR, temp: TEMP, shot: true});
 
 const CATS = [
   ['coffee','Кофе'],['other','Не кофе'],['breakfast','Завтраки'],['dessert','Десерты'],['bakery','Выпечка'],
@@ -32,17 +34,19 @@ const MENU = [
   {id:'cappuccino',cat:'coffee',name:'Капучино',desc:'Двойной эспрессо и плотная молочная пена.',img:'cappuccino',price:220,coffee:true,opts:coffeeOpts([['0,25 л',220],['0,35 л',260],['0,45 л',290]]),hit:true},
   {id:'flatwhite',cat:'coffee',name:'Флэт уайт',desc:'Больше кофе, меньше молока. Для тех, кто любит покрепче.',img:'flatwhite',price:240,coffee:true,opts:coffeeOpts([['0,2 л',240],['0,3 л',280]])},
   {id:'latte',cat:'coffee',name:'Латте',desc:'Мягкий, молочный, хорошо дружит с сиропом.',img:'cappuccino',price:230,coffee:true,opts:coffeeOpts([['0,35 л',230],['0,45 л',270]])},
-  {id:'raf',cat:'coffee',name:'Раф пряный',desc:'Сливки, корица, бадьян и немного ванили.',img:'raf',price:280,coffee:true,opts:{sizes:[['0,3 л',280],['0,4 л',320]],milk:MILK}},
-  {id:'pumpkin',cat:'coffee',name:'Тыквенный латте',desc:'Пюре из печёной тыквы, пряности, корица сверху.',img:'pumpkin',price:290,coffee:true,tag:'Сезон',opts:{sizes:[['0,3 л',290],['0,4 л',330]],milk:MILK}},
-  {id:'americano',cat:'coffee',name:'Американо',desc:'Эспрессо и горячая вода.',img:'espresso',price:170,coffee:true,opts:{sizes:[['0,25 л',170],['0,35 л',200]],milk:[['Без молока',0],['С молоком',20]],syrup:SYRUP,shot:true}},
-  {id:'espresso',cat:'coffee',name:'Эспрессо',desc:'30 мл, зерно средней обжарки.',img:'espresso',price:140,coffee:true,opts:{sizes:[['Одинарный',140],['Двойной',180]]}},
+  {id:'raf',cat:'coffee',name:'Раф пряный',desc:'Сливки, корица, бадьян и немного ванили.',img:'raf',price:280,coffee:true,opts:{sizes:[['0,3 л',280],['0,4 л',320]],milk:MILK,sugar:SUGAR,temp:TEMP}},
+  {id:'pumpkin',cat:'coffee',name:'Тыквенный латте',desc:'Пюре из печёной тыквы, пряности, корица сверху.',img:'pumpkin',price:290,coffee:true,tag:'Сезон',opts:{sizes:[['0,3 л',290],['0,4 л',330]],milk:MILK,sugar:SUGAR,temp:TEMP}},
+  {id:'americano',cat:'coffee',name:'Американо',desc:'Эспрессо и горячая вода.',img:'espresso',price:170,coffee:true,opts:{sizes:[['0,25 л',170],['0,35 л',200]],milk:[['Без молока',0],['С молоком',20]],syrup:SYRUP,sugar:SUGAR,shot:true}},
+  {id:'espresso',cat:'coffee',name:'Эспрессо',desc:'30 мл, зерно средней обжарки.',img:'espresso',price:140,coffee:true,opts:{sizes:[['Одинарный',140],['Двойной',180]],sugar:SUGAR}},
 
-  {id:'matcha',cat:'other',name:'Матча латте',desc:'Японский зелёный чай на молоке.',img:'matcha',price:290,opts:{sizes:[['0,3 л',290],['0,4 л',330]],milk:MILK,syrup:SYRUP}},
-  {id:'cocoa',cat:'other',name:'Какао с маршмеллоу',desc:'Густое, на настоящем какао, не из пакетика.',img:'cocoa',price:230,opts:{sizes:[['0,3 л',230],['0,4 л',270]],milk:MILK},hit:true},
-  {id:'tea',cat:'other',name:'Облепиховый чай',desc:'Облепиха, мёд, мята и апельсин. Чайник 600 мл.',img:'tea',price:320,tag:'Греет'},
+  {id:'matcha',cat:'other',name:'Матча латте',desc:'Японский зелёный чай на молоке.',img:'matcha',price:290,opts:{sizes:[['0,3 л',290],['0,4 л',330]],milk:MILK,syrup:SYRUP,sugar:SUGAR,temp:TEMP}},
+  {id:'cocoa',cat:'other',name:'Какао с маршмеллоу',desc:'Густое, на настоящем какао, не из пакетика.',img:'cocoa',price:230,opts:{sizes:[['0,3 л',230],['0,4 л',270]],milk:MILK,temp:TEMP},hit:true},
+  {id:'tea',cat:'other',name:'Облепиховый чай',desc:'Облепиха, мёд, мята и апельсин. Чайник 600 мл.',img:'tea',price:320,tag:'Греет',opts:{sugar:[['Без сахара',0],['Сахар отдельно',0],['Ещё мёда',0]]}},
 
-  {id:'combo',cat:'breakfast',name:'Завтрак-сет до 12:00',desc:'Сырники или омлет с круассаном и капучино 0,25 л.',img:'syrniki',price:490,old:580,tag:'Выгодно',
-    opts:{dish:[['Сырники',0],['Омлет с круассаном',0]]},morning:true},
+  {id:'combo',cat:'breakfast',name:'Завтрак-сет до 12:00',desc:'Сырники или омлет с круассаном и кофе на выбор.',img:'syrniki',price:490,old:580,tag:'Выгодно',
+    opts:{dish:[['Сырники',0,'syrniki'],['Омлет с круассаном',0,'omelette']],
+      drink:[['Капучино 0,25 л',0],['Латте 0,35 л',0],['Американо 0,25 л',0],['Флэт уайт 0,2 л',20],['Раф 0,3 л',60]],
+      milk:MILK, syrup:SYRUP, sugar:SUGAR, temp:TEMP},morning:true},
   {id:'syrniki',cat:'breakfast',name:'Сырники',desc:'Три штуки, сметана, малина и черника.',img:'syrniki',price:360,hit:true},
   {id:'omelette',cat:'breakfast',name:'Омлет с круассаном',desc:'Нежный омлет, сливочный круассан и зелень.',img:'omelette',price:390},
   {id:'porridge',cat:'breakfast',name:'Овсянка с брусникой',desc:'На молоке, с брусникой, бананом и мёдом.',img:'porridge',price:270},
@@ -109,7 +113,7 @@ syncMotion(); reduceMQ.addEventListener?.('change', syncMotion);
 const KEY = 'liks:v1';
 const fresh = () => ({
   tab:'home', mode:'togo', cart:[], user:null, table:'', plate:'', region:'35', address:'', flat:'',
-  when:'asap', pay:'sbp', usePoints:false, useGift:false, useSub:false, theme:'auto', order:null, fav:[],
+  when:'asap', pay:'sbp', cutlery:null, napkins:true, carrier:false, sticks:false, comment:'', usePoints:false, useGift:false, useSub:false, theme:'auto', order:null, fav:[],
 });
 let S = fresh();
 try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch(e) {}
@@ -198,7 +202,7 @@ addEventListener('keydown', e => { if (e.key === 'Escape' && sheetOpen) closeShe
   const down = e => {
     if (!sheetOpen || e.button > 0) return;
     const inBody = body.contains(e.target);
-    if (inBody && (body.scrollTop > 0 || e.target.closest('input,textarea,select,.rail,.plate'))) return;
+    if (inBody && (body.scrollTop > 0 || e.target.closest('input,textarea,select,.rail,.plate,.seg--scroll'))) return;
     sp.stop();
     drag = {id:e.pointerId, y0:e.clientY, start:sp.x, hist:[{y:e.clientY,t:e.timeStamp}], active:!inBody, inBody};
   };
@@ -256,6 +260,7 @@ function unitPrice(item, o={}){
   if (item.opts?.sizes && o.size != null) p = item.opts.sizes[o.size][1];
   if (item.opts?.milk && o.milk != null) p += item.opts.milk[o.milk][1];
   if (item.opts?.syrup && o.syrup != null) p += item.opts.syrup[o.syrup][1];
+  if (item.opts?.drink && o.drink != null) p += item.opts.drink[o.drink][1];
   if (o.shot) p += 60;
   return p;
 }
@@ -263,8 +268,11 @@ function optText(item, o={}){
   const t = [];
   if (item.opts?.sizes) t.push(item.opts.sizes[o.size ?? 0][0]);
   if (item.opts?.dish) t.push(item.opts.dish[o.dish ?? 0][0]);
-  if (item.opts?.milk && o.milk) t.push(item.opts.milk[o.milk][0].toLowerCase() + ' молоко');
+  if (item.opts?.drink) t.push(item.opts.drink[o.drink ?? 0][0]);
+  if (item.opts?.milk && o.milk) t.push(item.opts.milk[o.milk][0].toLowerCase() + (item.opts.milk[o.milk][0].startsWith('С') || item.opts.milk[o.milk][0].startsWith('Без') ? '' : ' молоко'));
   if (item.opts?.syrup && o.syrup) t.push(item.opts.syrup[o.syrup][0].toLowerCase());
+  if (item.opts?.sugar && o.sugar) t.push(item.opts.sugar[o.sugar][0].toLowerCase() + (o.sugar === 1 || o.sugar === 2 ? ' сахара' : ''));
+  if (item.opts?.temp && o.temp) t.push(item.opts.temp[o.temp][0].toLowerCase());
   if (o.shot) t.push('доп. эспрессо');
   if (o.warm) t.push('подогреть');
   return t.join(', ');
@@ -275,6 +283,7 @@ function addToCart(id, o={}, qty=1){
   if (line) line.qty += qty; else S.cart.push({key, id, o, qty, price: unitPrice(item, o)});
   save(); renderCartPill(); vibrate(8);
 }
+const imgOf = (m, o={}) => m.opts?.dish ? m.opts.dish[o.dish ?? 0][2] : m.img;
 const cartQty = id => S.cart.filter(l => l.id === id).reduce((a,l) => a+l.qty, 0);
 const units = pred => S.cart.flatMap(l => pred(byId(l.id), l) ? Array(l.qty).fill(l.price) : []);
 const level = () => { const n = S.user?.orders?.length || 0; return [...LEVELS].reverse().find(l => n >= l.from); };
@@ -417,7 +426,7 @@ const PROMOS = [
     more:'Каждый кофе из приложения или по карте на кассе даёт отметку. После пяти отметок любой кофе в следующем заказе за наш счёт.'},
   {id:'car', kick:'К машине', t:'Не выходите из машины', s:'Парковка у входа, вынесем заказ сами.', icon:'car', style:'ink',
     more:'Выберите «К машине», впишите номер, и когда кофе будет готов, бариста вынесет его к вам. Удобно по пути на работу или с детьми в салоне.', mode:'car'},
-  {id:'breakfast', kick:'490 ₽', t:'Завтрак-сет до 12:00', s:'Сырники или омлет с круассаном и капучино.', img:'syrniki',
+  {id:'breakfast', kick:'490 ₽', t:'Завтрак-сет до 12:00', s:'Сырники или омлет с круассаном и кофе на выбор.', img:'syrniki',
     more:'Каждый день до 12:00. Вместо 580–610 ₽ по отдельности. Можно в зале, с собой или с доставкой.', dish:'combo'},
   {id:'quiet', kick:'−50%', t:'На второй десерт с 15 до 17', s:'Тихие часы: тише в зале, слаще за столом.', img:'medovik',
     more:'С 15:00 до 17:00 при заказе двух десертов второй (тот, что дешевле) за полцены. Скидка считается в корзине сама.'},
@@ -587,7 +596,7 @@ Object.values(views).forEach(v => v.addEventListener('scroll', () => v.classList
 /* ---------- Карточка блюда ---------- */
 function openDish(id){
   const m = byId(id); if (!m) return;
-  const o = {size: m.opts?.sizes ? 0 : undefined, milk: m.opts?.milk ? 0 : undefined, syrup: m.opts?.syrup ? 0 : undefined, dish: m.opts?.dish ? 0 : undefined, shot:false, warm:false};
+  const o = {size: m.opts?.sizes ? 0 : undefined, milk: m.opts?.milk ? 0 : undefined, syrup: m.opts?.syrup ? 0 : undefined, dish: m.opts?.dish ? 0 : undefined, drink: m.opts?.drink ? 0 : undefined, sugar: m.opts?.sugar ? 0 : undefined, temp: m.opts?.temp ? 0 : undefined, shot:false, warm:false};
   let qty = 1;
   const group = (key, label, list, extra='') => `<div class="field"><div class="field__label">${label}${extra}</div><div class="seg">
     ${list.map(([n,p],i) => `<button class="opt ${o[key]===i?'is-on':''}" type="button" data-opt="${key}" data-i="${i}">${esc(n)}${p ? `<small>${key==='size'?rub(p):'+'+rub(p)}</small>` : (key==='size'?`<small>${rub(p)}</small>`:'')}</button>`).join('')}
@@ -595,13 +604,16 @@ function openDish(id){
   const draw = () => {
     const price = unitPrice(m, o) * qty;
     openSheet(`
-      <div class="sheet__img" style="--fo:${FOCUS[m.img]}"><img src="${IMG(m.img)}" alt="${esc(m.name)}"></div>
+      <div class="sheet__img" id="dishImg" style="--fo:${FOCUS[imgOf(m, o)]}"><img src="${IMG(imgOf(m, o))}" alt="${esc(m.name)}"></div>
       <h2 id="sheetTitle">${T(m.name)}</h2>
       <p class="sheet__lead">${T(m.desc)}</p>
       ${m.opts?.sizes ? group('size','Объём', m.opts.sizes) : ''}
       ${m.opts?.dish ? group('dish','Завтрак', m.opts.dish) : ''}
+      ${m.opts?.drink ? `<h3 class="sub-h">Кофе к завтраку</h3>` + group('drink','Напиток', m.opts.drink) : ''}
       ${m.opts?.milk ? group('milk','Молоко', m.opts.milk) : ''}
       ${m.opts?.syrup ? group('syrup','Сироп', m.opts.syrup) : ''}
+      ${m.opts?.sugar ? group('sugar', m.id==='tea' ? 'Сладость' : 'Сахар', m.opts.sugar) : ''}
+      ${m.opts?.temp ? group('temp','Температура', m.opts.temp) : ''}
       ${m.opts?.shot ? `<button class="toggle" type="button" role="switch" aria-checked="${o.shot}" data-flag="shot"><div><b>Ещё эспрессо</b><span>Покрепче, +60 ₽</span></div><i class="switch"></i></button>` : ''}
       ${m.opts?.warm ? `<button class="toggle" type="button" role="switch" aria-checked="${o.warm}" data-flag="warm"><div><b>Подогреть</b><span>Бесплатно</span></div><i class="switch"></i></button>` : ''}
       <div class="buy">
@@ -612,7 +624,16 @@ function openDish(id){
   draw();
   body.onclick = e => {
     const op = e.target.closest('[data-opt]');
-    if (op) { o[op.dataset.opt] = +op.dataset.i; return update(); }
+    if (op) {
+      o[op.dataset.opt] = +op.dataset.i;
+      if (op.dataset.opt === 'dish') {
+        const k = imgOf(m, o), box = $('#dishImg', body), img = $('img', box);
+        box.style.setProperty('--fo', FOCUS[k]);
+        if (motionOn()) { img.animate([{opacity:.25},{opacity:1}], {duration:260, easing:'ease-out'}); }
+        img.src = IMG(k);
+      }
+      return update();
+    }
     const fl = e.target.closest('[data-flag]');
     if (fl) { o[fl.dataset.flag] = !o[fl.dataset.flag]; return update(); }
     const q = e.target.closest('[data-q]');
@@ -621,6 +642,7 @@ function openDish(id){
       const clean = Object.fromEntries(Object.entries(o).filter(([k,v]) => v !== undefined && v !== false && !(k!=='size'&&k!=='dish'&&v===0)));
       if (m.opts?.sizes) clean.size = o.size;
       if (m.opts?.dish) clean.dish = o.dish;
+      if (m.opts?.drink) clean.drink = o.drink;
       addToCart(m.id, clean, qty);
       closeSheet(); toast(`${m.name} в корзине`); refreshCards();
     }
@@ -660,6 +682,33 @@ function whenField(){
     ${slots.map(s => `<button class="opt ${S.when===s?'is-on':''}" type="button" data-when="${s}" style="flex:none">К ${s}<small>${S.mode==='car'?'подъеду':'заберу'}</small></button>`).join('')}
   </div></div>`;
 }
+const FOOD_CATS = ['breakfast','dessert','bakery'];
+const DRINK = it => it.coffee || it.cat === 'other' || it.id === 'combo';
+function autoCutlery(){
+  const food = S.cart.filter(l => FOOD_CATS.includes(byId(l.id).cat)).reduce((a,l) => a+l.qty, 0);
+  return Math.min(food, 6);
+}
+const cutlery = () => S.cutlery ?? autoCutlery();
+function extrasField(){
+  const n = cutlery(), away = S.mode !== 'hall';
+  const drinks = S.cart.filter(l => DRINK(byId(l.id))).reduce((a,l) => a+l.qty, 0);
+  return `<div class="field"><div class="field__label">К заказу</div>
+    <div class="toggle"><div><b>Приборы</b><span>${n ? `на ${n} ${plural(n,'персону','персоны','персон')}` : 'не нужны'}</span></div>
+      <div class="mini-step" style="margin-left:auto"><button type="button" data-cut="-1" aria-label="Меньше приборов">−</button><output>${n}</output><button type="button" data-cut="1" aria-label="Больше приборов">+</button></div></div>
+    <button class="toggle" type="button" role="switch" aria-checked="${!!S.napkins}" data-cflag="napkins"><div><b>Салфетки</b><span>Положим по паре на персону</span></div><i class="switch"></i></button>
+    ${away && drinks >= 2 ? `<button class="toggle" type="button" role="switch" aria-checked="${!!S.carrier}" data-cflag="carrier"><div><b>Подставка для стаканов</b><span>Удобно нести ${drinks} ${plural(drinks,'напиток','напитка','напитков')}</span></div><i class="switch"></i></button>` : ''}
+    ${away && drinks ? `<button class="toggle" type="button" role="switch" aria-checked="${!!S.sticks}" data-cflag="sticks"><div><b>Сахар и палочки с собой</b><span>Положим в пакет отдельно</span></div><i class="switch"></i></button>` : ''}
+    <textarea class="input textarea" id="fComment" maxlength="200" rows="2" placeholder="Комментарий бариста: имя на стакане, без корицы…">${esc(S.comment)}</textarea>
+  </div>`;
+}
+function extrasText(){
+  const t = [], n = cutlery();
+  if (n) t.push(`приборы на ${n} ${plural(n,'персону','персоны','персон')}`);
+  if (S.napkins) t.push('салфетки');
+  if (S.mode !== 'hall' && S.carrier) t.push('подставка для стаканов');
+  if (S.mode !== 'hall' && S.sticks) t.push('сахар и палочки');
+  return t.join(', ');
+}
 function cartHTML(){
   if (!S.cart.length) return `<h2 id="sheetTitle">Корзина</h2><div class="empty"><b>Пока пусто</b><p class="muted">${T('Начните с капучино или загляните в завтраки.')}</p></div><div class="buy"><button class="btn" type="button" data-tomenu>Открыть меню</button></div>`;
   const t = totals(), u = S.user;
@@ -670,12 +719,13 @@ function cartHTML(){
   return `<h2 id="sheetTitle">Ваш заказ</h2>
     <div class="field"><div class="seg seg--scroll">${Object.entries(MODES).map(([k,m]) => `<button class="chip ${S.mode===k?'is-on':''}" type="button" data-cmode="${k}">${m.name}</button>`).join('')}</div></div>
     <div style="margin-top:12px">${S.cart.map(l => { const m = byId(l.id); return `<div class="line-item">
-      <div class="line-item__img" style="--fo:${FOCUS[m.img]}"><img src="${IMG(m.img)}" alt=""></div>
+      <div class="line-item__img" style="--fo:${FOCUS[imgOf(m, l.o)]}"><img src="${IMG(imgOf(m, l.o))}" alt=""></div>
       <div><b>${T(m.name)}</b><span>${esc(optText(m, l.o) || '')}${optText(m,l.o)?', ':''}${rub(l.price)}</span></div>
       <div class="mini-step"><button type="button" data-lq="-1" data-key="${esc(l.key)}" aria-label="Меньше">−</button><output>${l.qty}</output><button type="button" data-lq="1" data-key="${esc(l.key)}" aria-label="Больше">+</button></div>
     </div>`; }).join('')}</div>
     ${deliveryFields()}
     ${whenField()}
+    ${extrasField()}
     ${canGift ? `<button class="toggle" type="button" role="switch" aria-checked="${!!S.useGift}" data-cflag="useGift"><div><b>Шестой кофе от нас</b><span>Самый недорогой кофе в заказе бесплатно</span></div><i class="switch"></i></button>` : ''}
     ${canSub && !S.useGift ? `<button class="toggle" type="button" role="switch" aria-checked="${!!S.useSub}" data-cflag="useSub"><div><b>Списать с абонемента</b><span>Осталось ${u.sub} ${plural(u.sub,'чашка','чашки','чашек')}</span></div><i class="switch"></i></button>` : ''}
     ${u && (u.points||0) > 0 ? `<button class="toggle" type="button" role="switch" aria-checked="${!!S.usePoints}" data-cflag="usePoints"><div><b>Оплатить баллами</b><span>${T(`Можно до ${rub(Math.min(u.points, t.maxPts))}, у вас ${u.points}`)}</span></div><i class="switch"></i></button>` : ''}
@@ -710,7 +760,7 @@ function bindCart(){
     S.plate = pl.value; save();
   });
   const bindVal = (sel, key) => { const el = $(sel, body); el && el.addEventListener('input', () => { S[key] = el.value; save(); }); };
-  bindVal('#fRegion','region'); bindVal('#fTable','table'); bindVal('#fAddr','address'); bindVal('#fFlat','flat');
+  bindVal('#fRegion','region'); bindVal('#fTable','table'); bindVal('#fAddr','address'); bindVal('#fFlat','flat'); bindVal('#fComment','comment');
   body.onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.tomenu !== undefined) { closeSheet(); go('menu'); return; }
@@ -721,6 +771,7 @@ function bindCart(){
       save(); redrawCart(); refreshCards(); return;
     }
     if (b.dataset.when) { S.when = b.dataset.when; save(); redrawCart(); return; }
+    if (b.dataset.cut) { S.cutlery = Math.max(0, Math.min(10, cutlery() + +b.dataset.cut)); save(); redrawCart(); return; }
     if (b.dataset.pay) { S.pay = b.dataset.pay; save(); redrawCart(); return; }
     if (b.dataset.cflag) { const k = b.dataset.cflag; S[k] = !S[k]; if (k==='useGift' && S[k]) S.useSub=false; save(); redrawCart(); return; }
     if (b.dataset.checkout !== undefined) checkout();
@@ -780,9 +831,10 @@ function placeOrder(t, how){
   }[S.mode];
   const mins = S.mode === 'delivery' ? 40 : 7;
   const order = {no: 100 + Math.floor(Math.random()*900), at: Date.now(), eta: Date.now() + mins*60e3, steps, mode:S.mode, total:t.total, how,
-    items: S.cart.map(l => `${byId(l.id).name}${l.qty>1?' ×'+l.qty:''}`), demo: CAFE.testMode, when: S.when};
+    items: S.cart.map(l => `${byId(l.id).name}${l.qty>1?' ×'+l.qty:''}`), demo: CAFE.testMode, when: S.when,
+    extras: extrasText(), comment: S.comment.trim()};
   u.orders.unshift({no:order.no, at:order.at, total:t.total, items:order.items, mode:S.mode});
-  S.order = order; S.cart = []; S.useGift = S.useSub = S.usePoints = false;
+  S.order = order; S.cart = []; S.useGift = S.useSub = S.usePoints = false; S.cutlery = null; S.comment = '';
   save(); render();
   vibrate([12,60,20]);
   openStatus(true);
@@ -800,7 +852,7 @@ function openStatus(justPaid){
     const {idx} = orderStage(o);
     return `${justPaid ? `<div class="done"><svg viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="42"/><path d="m26 43 11 11 21-23"/></svg></div>` : ''}
       <h2 id="sheetTitle" ${justPaid?'style="text-align:center;padding:0"':''}>Заказ №${o.no}</h2>
-      <p class="sheet__lead" ${justPaid?'style="text-align:center"':''}>${T(o.items.join(', '))}. ${rub(o.total)}, ${esc(o.how)}.</p>
+      <p class="sheet__lead" ${justPaid?'style="text-align:center"':''}>${T(o.items.join(', '))}. ${rub(o.total)}, ${esc(o.how)}.${o.extras ? `<br>${T(o.extras[0].toUpperCase() + o.extras.slice(1))}.` : ''}${o.comment ? `<br>«${esc(o.comment)}»` : ''}</p>
       <ol class="steps">${o.steps.map((s,i) => `<li class="${i<idx?'is-done':i===idx?'is-now':''}"><div><b>${T(s[0])}</b><span>${T(s[1])}</span></div></li>`).join('')}</ol>
       <div class="buy"><button class="btn btn--ghost" type="button" data-closest>Хорошо</button></div>`;
   };

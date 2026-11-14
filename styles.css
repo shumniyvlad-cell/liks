@@ -451,3 +451,15 @@ p{text-wrap:pretty}
 .seg--scroll{flex-wrap:nowrap;overflow-x:auto;margin:0 -20px;padding:0 20px;scrollbar-width:none}
 .seg--scroll::-webkit-scrollbar{display:none}
 .seg--scroll .chip{flex:none}
+
+.sub-h{font-size:19px;font-weight:850;letter-spacing:-.01em;margin-top:26px;padding-top:18px;border-top:1px solid var(--line)}
+.textarea{height:auto;min-height:56px;padding:14px;resize:none;margin-top:8px;font-size:16px;line-height:1.35}
+div.toggle .mini-step{flex:none}
+
+/* Переворот карты: лицевая сторона и всё на ней прячутся на середине поворота, иначе слои с z-index просвечивают зеркально */
+.loyal__face *,.loyal__front::after{backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.loyal__front{visibility:visible;transition:visibility 0s linear .3s}
+.loyal__back{visibility:hidden;transition:visibility 0s linear .3s}
+.loyal.is-flipped .loyal__front{visibility:hidden}
+.loyal.is-flipped .loyal__back{visibility:visible}
+:root:not([data-motion="on"]) .loyal__front,:root:not([data-motion="on"]) .loyal__back{transition:none}
