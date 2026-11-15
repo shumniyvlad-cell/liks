@@ -1,3 +1,4 @@
+import type {ArtName} from './ui/brand';
 // Всё про кофейню живёт здесь: адрес, часы, меню, акции.
 // Цвет акцента — в теме: npx astryx experimental theme editor set liks accent "#hex".
 
@@ -118,30 +119,32 @@ export type Promo = {
   title: string;
   text: string;
   more: string;
-  /** Цвет плитки: коралл вывески, шалфей стены зала, мята посуды или чернила. */
-  tone: 'coral' | 'sage' | 'mint' | 'ink';
+  /** Цвет плитки из палитры айдентики: лес, красный, синий или светлая бумага. */
+  tone: 'forest' | 'berry' | 'denim' | 'paper';
+  /** Иллюстрация из айдентики в углу плитки. */
+  art: ArtName;
   photo?: string;
   action: {kind: 'dish'; id: string} | {kind: 'sub'} | {kind: 'mode'; mode: ModeId} | {kind: 'invite'} | {kind: 'bday'} | {kind: 'menu'};
   cta: string;
 };
 
 export const PROMOS: Promo[] = [
-  {id: 'first', kick: '−20%', title: 'На первый заказ в приложении', text: 'Скидка встанет сама, промокод не нужен.', tone: 'coral', photo: 'cappuccino',
+  {id: 'first', kick: '−20%', title: 'На первый заказ в приложении', text: 'Скидка встанет сама, промокод не нужен.', tone: 'denim', art: 'percent', photo: 'cappuccino',
     more: 'Действует на первый заказ после входа по номеру телефона, на всё меню, кроме абонемента. Суммируется с баллами.', action: {kind: 'menu'}, cta: 'Открыть меню'},
-  {id: 'breakfast', kick: '490 ₽', title: 'Завтрак-сет до 12:00', text: 'Сырники или омлет с круассаном и кофе на выбор.', tone: 'mint', photo: 'syrniki',
+  {id: 'breakfast', kick: '490 ₽', title: 'Завтрак-сет до 12:00', text: 'Сырники или омлет с круассаном и кофе на выбор.', tone: 'paper', art: 'croissant', photo: 'syrniki',
     more: 'Каждый день до 12:00. Вместо 580–610 ₽ по отдельности. Можно в зале, с собой или с доставкой.', action: {kind: 'dish', id: 'combo'}, cta: 'Выбрать завтрак'},
-  {id: 'car', kick: 'К машине', title: 'Не выходите из машины', text: 'Парковка у входа, вынесем заказ сами.', tone: 'ink',
+  {id: 'car', kick: 'К машине', title: 'Не выходите из машины', text: 'Парковка у входа, вынесем заказ сами.', tone: 'forest', art: 'togo',
     more: 'Выберите «К машине», впишите номер, и когда кофе будет готов, бариста вынесет его к вам. Удобно по пути на работу или с детьми в салоне.', action: {kind: 'mode', mode: 'car'}, cta: 'Заказать к машине'},
-  {id: 'sixth', kick: '6-й кофе', title: 'В подарок после пяти', text: 'Чашки наполняются на карте гостя.', tone: 'sage', photo: 'flatwhite',
+  {id: 'sixth', kick: '6-й кофе', title: 'В подарок после пяти', text: 'Чашки наполняются на карте гостя.', tone: 'berry', art: 'steam', photo: 'flatwhite',
     more: 'Каждый кофе из приложения или по карте на кассе наполняет чашку на карте. Пять полных — и любой кофе в следующем заказе за наш счёт.', action: {kind: 'menu'}, cta: 'Открыть меню'},
-  {id: 'quiet', kick: '−50%', title: 'На второй десерт с 15 до 17', text: 'Тихие часы: тише в зале, слаще за столом.', tone: 'mint', photo: 'medovik',
+  {id: 'quiet', kick: '−50%', title: 'На второй десерт с 15 до 17', text: 'Тихие часы: тише в зале, слаще за столом.', tone: 'paper', art: 'cupcake', photo: 'medovik',
     more: 'С 15:00 до 17:00 при заказе двух десертов второй (тот, что дешевле) за полцены. Скидка считается в корзине сама.', action: {kind: 'menu'}, cta: 'Выбрать десерты'},
-  {id: 'sub', kick: '195 ₽', title: 'Капучино по абонементу', text: '20 чашек за 3 900 ₽ вместо 5 200 ₽.', tone: 'sage', photo: 'cappuccino',
+  {id: 'sub', kick: '195 ₽', title: 'Капучино по абонементу', text: '20 чашек за 3 900 ₽ вместо 5 200 ₽.', tone: 'forest', art: 'steam', photo: 'cappuccino',
     more: 'Двадцать капучино или латте 0,35 л на 60 дней. Чашка списывается в корзине одной кнопкой, можно угощать коллег.', action: {kind: 'sub'}, cta: 'Добавить абонемент'},
-  {id: 'friend', kick: '+150', title: 'Баллов за друга', text: 'Другу −20% на первый заказ, вам 150 баллов.', tone: 'coral',
+  {id: 'friend', kick: '+150', title: 'Баллов за друга', text: 'Другу −20% на первый заказ, вам 150 баллов.', tone: 'denim', art: 'people',
     more: 'Отправьте другу ссылку из профиля. Когда он сделает первый заказ, вам придут 150 баллов. 1 балл = 1 ₽, баллами можно оплатить до 30% заказа.', action: {kind: 'invite'}, cta: 'Пригласить друга'},
-  {id: 'delivery', kick: `от ${cafe.deliveryFreeFrom} ₽`, title: 'Доставка бесплатно', text: `По району в радиусе ${cafe.deliveryRadius}, привезём горячим.`, tone: 'ink',
+  {id: 'delivery', kick: `от ${cafe.deliveryFreeFrom} ₽`, title: 'Доставка бесплатно', text: `По району в радиусе ${cafe.deliveryRadius}, привезём горячим.`, tone: 'berry', art: 'togo',
     more: `Доставляем в радиусе ${cafe.deliveryRadius} от кофейни. Заказ от ${cafe.deliveryFreeFrom} ₽ бесплатно, меньше — ${cafe.deliveryFee} ₽. Кофе едет в термосумке с крышками-непроливайками.`, action: {kind: 'mode', mode: 'delivery'}, cta: 'Заказать с доставкой'},
-  {id: 'bday', kick: 'Десерт', title: 'В подарок на день рождения', text: 'Три дня до и три после.', tone: 'mint', photo: 'cheesecake',
+  {id: 'bday', kick: 'Десерт', title: 'В подарок на день рождения', text: 'Три дня до и три после.', tone: 'paper', art: 'cupcake', photo: 'cheesecake',
     more: 'Укажите дату рождения в профиле. В эти семь дней любой десерт до 320 ₽ добавится к заказу бесплатно.', action: {kind: 'bday'}, cta: 'Указать дату'},
 ];

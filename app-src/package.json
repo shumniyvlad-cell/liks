@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "publish": "npm run build && rm -rf ../assets ../img && cp -R dist/. ../"
+    "publish": "npm run build && rm -rf ../assets ../img && cp -R dist/. ../",
+    "draft": "npm run build && rm -rf ../draft && cp -R dist ../draft"
   },
   "dependencies": {
     "@astryxdesign/core": "^0.7.16",

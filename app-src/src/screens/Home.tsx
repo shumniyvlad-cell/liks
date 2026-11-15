@@ -11,6 +11,7 @@ import {addToCart, isOpen, rub, set, stage, T, useStore, vibrate} from '../store
 import {useUI} from '../ui/ctx';
 import {CarIcon, MODE_ICON} from '../ui/icons';
 import {LoyaltyCard} from '../ui/LoyaltyCard';
+import {LogoFull} from '../ui/brand';
 import {DishTile, Me, PromoTile, Section, TopBar} from '../ui/parts';
 
 const greeting = () => {
@@ -69,10 +70,7 @@ export function Home() {
   return (
     <>
       <TopBar>
-        <HStack gap={2} vAlign="center">
-          <span className="wordmark" translate="no">Ликс</span>
-          <span className="wordmark-sub">кофейня<br />{cafe.city}</span>
-        </HStack>
+        <LogoFull className="logo" title={`Ликс, кофейня в ${cafe.city === 'Вологда' ? 'Вологде' : cafe.city}`} />
         <Me />
       </TopBar>
 

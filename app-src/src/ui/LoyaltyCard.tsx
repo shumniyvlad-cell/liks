@@ -1,5 +1,5 @@
-// Карта гостя: коралл фасада и объёмная надпись, как на вывеске.
-// Пять чашек наливаются кофе по одной за заказ, шестая — подарок.
+// Карта гостя по айдентике: лес, огромный росчерк знака, как на футболке бариста, и знак «Ликс кофейня».
+// Пять фирменных стаканчиков наливаются по одному за заказ, шестое — пирожное в подарок.
 // Мышью карта наклоняется до 7° и ловит блик; нажатие переворачивает её к QR для кассы.
 
 import {useEffect, useMemo, useRef, useState, type PointerEvent} from 'react';
@@ -7,6 +7,7 @@ import qrcode from 'qrcode-generator';
 import {level, plural, useStore, vibrate} from '../store';
 import {motionOn} from './motion';
 import {useUI} from './ctx';
+import {ART, LogoFull, LogoScript} from './brand';
 
 export function qrSvg(text: string) {
   const q = qrcode(0, 'M');
@@ -15,25 +16,22 @@ export function qrSvg(text: string) {
   return q.createSvgTag({cellSize: 4, margin: 0, scalable: true});
 }
 
+/** Штамп: фирменный стаканчик из айдентики наливается снизу; шестой — пирожное в подарок. */
 function Cup({fill, gift, delay}: {fill: number; gift?: boolean; delay: number}) {
   const id = useMemo(() => 'c' + Math.random().toString(36).slice(2, 8), []);
-  const body = 'M5 9h17v6.5A8.5 8.5 0 0 1 13.5 24 8.5 8.5 0 0 1 5 15.5Z';
+  const a = ART[gift ? 'cupcake' : 'togo'];
+  const [x, y, w, h] = a.vb.split(' ').map(Number);
   return (
-    <svg className={`cup${gift ? ' is-gift' : ''}`} viewBox="0 0 30 30" aria-hidden="true">
+    <svg className={`cup${gift ? ' cup--gift' : ''}${gift && fill ? ' is-ready' : ''}`} viewBox={a.vb} aria-hidden="true">
       <defs>
         <clipPath id={id}>
-          <path d={body} />
+          <path d={a.d} />
         </clipPath>
       </defs>
+      <path className="cup__empty" d={a.d} />
       <g clipPath={`url(#${id})`}>
-        <g className="cup__liquid" style={{['--fill' as string]: fill, ['--delay' as string]: `${delay}s`, transformBox: 'fill-box'}}>
-          <rect x="4" y="11" width="20" height="15" fill="white" />
-          <path className="cup__wave" d="M4 11.5q1.5-1.6 3 0t3 0 3 0 3 0 3 0 3 0 3 0 3 0 3 0V13H4Z" fill="white" />
-        </g>
+        <rect className="cup__liquid" x={x} y={y} width={w} height={h} style={{['--fill' as string]: fill, ['--delay' as string]: `${delay}s`}} />
       </g>
-      <path className="cup__body" d={body} fill="none" stroke="white" strokeWidth="1.6" strokeLinejoin="round" />
-      <path d="M22 11h1.5a3 3 0 0 1 0 6H21.5" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
-      {gift && <path d="M13.5 13.5v6M10.5 16.5h6" stroke={fill ? 'var(--coral)' : 'white'} strokeWidth="1.6" strokeLinecap="round" />}
     </svg>
   );
 }
@@ -90,6 +88,7 @@ export function LoyaltyCard() {
         onClick={onClick}
         aria-label={user ? (flipped ? 'Карта гостя, код для кассы. Нажмите, чтобы вернуть' : 'Карта гостя. Нажмите, чтобы показать код на кассе') : 'Карта гостя. Войдите по номеру'}>
         <span className="loyal__face loyal__front">
+          <LogoScript className="loyal__script" />
           <span className="loyal__top">
             <span className="loyal__level">{user ? `${lv.name}, кешбэк ${lv.cash}%` : 'Карта гостя'}</span>
             <span className="loyal__pts">
@@ -104,10 +103,7 @@ export function LoyaltyCard() {
             </span>
           </span>
           <span className="loyal__bottom">
-            <span className="sign">
-              <span className="sign__mark" translate="no">Ликс</span>
-              <span className="sign__word" style={{display: 'block'}}>кофейня</span>
-            </span>
+            <LogoFull className="loyal__logo" />
             <span className="cups" role="img" aria-label={`${stamps} из 5 чашек, шестая в подарок`}>
               {[0, 1, 2, 3, 4].map((i) => (
                 <Cup key={i} fill={i < poured ? 1 : 0} delay={i * 0.12} />

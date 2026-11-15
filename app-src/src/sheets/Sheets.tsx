@@ -14,6 +14,8 @@ import {TextInput} from '@astryxdesign/core/TextInput';
 import {TextArea} from '@astryxdesign/core/TextArea';
 import {DateInput} from '@astryxdesign/core/DateInput';
 import {EmptyState} from '@astryxdesign/core/EmptyState';
+import {Art} from '../ui/brand';
+import {artColor} from '../ui/parts';
 import {byId, cafe, img, MODES, PROMOS, SUB, type Item, type ModeId, type Opt, type OptKey} from '../business';
 import {
   addToCart, changeQty, cutlery, drinksInCart, get, giftReady, isOpen, optText, photoOf, placeOrder, plural, rub, set, signIn,
@@ -187,6 +189,7 @@ function CartSheet() {
   if (!s.cart.length)
     return (
       <EmptyState
+        icon={<Art name="togo" className="empty-art" />}
         title="Пока пусто"
         description="Начните с капучино или загляните в завтраки."
         actions={<Button label="Открыть меню" variant="primary" onClick={() => go('menu')} />}
@@ -594,13 +597,11 @@ function PromoSheet({id}: {id: string}) {
   };
   return (
     <VStack gap={4}>
-      {p.photo && (
-        <div className="sheet-photo">
-          <img src={img(p.photo)} alt="" width={612} height={760} />
-        </div>
-      )}
+      <div className={`sheet-art tile--${p.tone}`}>
+        <Art name={p.art} style={{color: artColor(p)}} />
+      </div>
       <VStack gap={1}>
-        <span className={`tile__kick`} style={{color: 'var(--coral)'}}>{T(p.kick)}</span>
+        <span className="tile__kick" style={{color: p.tone === 'berry' ? 'var(--berry-text)' : 'var(--brand)'}}>{T(p.kick)}</span>
         <Heading level={2}>{T(p.title)}</Heading>
         <Text color="secondary">{T(p.more)}</Text>
       </VStack>
@@ -641,7 +642,7 @@ function HistorySheet() {
   const os = user?.orders ?? [];
   if (!os.length)
     return (
-      <EmptyState title="Заказов пока нет" description="Первый заказ в приложении со скидкой 20%." actions={<Button label="Открыть меню" variant="primary" onClick={() => go('menu')} />} />
+      <EmptyState icon={<Art name="steam" className="empty-art" />} title="Заказов пока нет" description="Первый заказ в приложении со скидкой 20%." actions={<Button label="Открыть меню" variant="primary" onClick={() => go('menu')} />} />
     );
   return (
     <VStack gap={4}>

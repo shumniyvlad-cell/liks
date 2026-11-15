@@ -31,33 +31,104 @@
       "source": "dial"
     },
     {
-      "thing": "accent",
-      "value": "#D63F24",
-      "source": "dial"
-    },
-    {
-      "thing": "neutral",
-      "value": "#66726B",
-      "source": "dial"
-    },
-    {
       "thing": "--color-on-accent",
       "value": "#FFFFFF",
       "source": "token"
     },
     {
+      "thing": "accent",
+      "value": "#44544D",
+      "source": "dial"
+    },
+    {
+      "thing": "neutral",
+      "value": "#5F6B65",
+      "source": "dial"
+    },
+    {
       "thing": "--color-background-body",
-      "value": "#EEF3EF",
+      "value": "#D3D5D0",
+      "source": "token",
+      "mode": "light"
+    },
+    {
+      "thing": "--color-accent",
+      "value": "#D3D5D0",
+      "source": "token",
+      "mode": "dark"
+    },
+    {
+      "thing": "--color-on-accent",
+      "value": "#FFFFFF",
       "source": "token",
       "mode": "light"
     },
     {
       "thing": "--color-background-body",
-      "value": "#121815",
+      "value": "#1E2622",
       "source": "token",
       "mode": "dark"
+    },
+    {
+      "thing": "--color-background-surface",
+      "value": "#2C3631",
+      "source": "token",
+      "mode": "dark"
+    },
+    {
+      "thing": "--color-on-accent",
+      "value": "#1E2622",
+      "source": "token",
+      "mode": "dark"
+    },
+    {
+      "thing": "--color-accent-muted",
+      "value": "#C9D2CC",
+      "source": "token",
+      "mode": "light"
+    },
+    {
+      "thing": "--color-accent-muted",
+      "value": "#3A4842",
+      "source": "token",
+      "mode": "dark"
+    },
+    {
+      "thing": "--color-text-accent",
+      "value": "#44544D",
+      "source": "token",
+      "mode": "light"
+    },
+    {
+      "thing": "--color-text-accent",
+      "value": "#D3D5D0",
+      "source": "token",
+      "mode": "dark"
+    },
+    {
+      "thing": "--color-text-primary",
+      "value": "#1F2925",
+      "source": "token",
+      "mode": "light"
+    },
+    {
+      "thing": "--color-text-primary",
+      "value": "#EEF0EC",
+      "source": "token",
+      "mode": "dark"
+    },
+    {
+      "thing": "--font-family-heading",
+      "value": "'Liks Display', 'Helvetica Neue', Arial Narrow, sans-serif",
+      "source": "token"
+    },
+    {
+      "thing": "text-transform",
+      "value": "uppercase",
+      "source": "property",
+      "on": "heading"
     }
   ],
   "lifted": [],
-  "palette": "d10cb075c6743d703ab5fa5c5bc830fb04b44fab273c7ed60aeb7f877299de14"
+  "palette": "098eb62f9ceb5edafcbe4c37a3469d77215e2235f07c61acbd40c17a93f90e50"
 }

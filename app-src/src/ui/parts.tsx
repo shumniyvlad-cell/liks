@@ -5,7 +5,8 @@ import {Avatar} from '@astryxdesign/core/Avatar';
 import {img, type Item, type Promo} from '../business';
 import {addToCart, cartQty, rub, T, useStore} from '../store';
 import {useUI} from './ctx';
-import {PlusIcon, ShareIcon, CarIcon, PinIcon} from './icons';
+import {PlusIcon} from './icons';
+import {Art, ART_COLOR, type ArtName} from './brand';
 
 /** Шапка: прозрачная вверху, стекло, когда под ней поехало содержимое. */
 export function TopBar({children}: {children: ReactNode}) {
@@ -112,17 +113,21 @@ export function DishRow({m}: {m: Item}) {
   );
 }
 
-const PROMO_ICON = {car: CarIcon, delivery: PinIcon, friend: ShareIcon} as Record<string, typeof CarIcon>;
+/** Цвет иллюстрации на плитке: на бумаге свой, на цветных — туман или пара из палитры, как на плакатах. */
+export function artColor(p: Promo) {
+  if (p.tone === 'paper') return ART_COLOR[p.art];
+  const pair: Partial<Record<Promo['tone'], Partial<Record<ArtName, string>>>> = {forest: {steam: 'var(--sage)'}, berry: {steam: 'var(--oak)'}};
+  return pair[p.tone]?.[p.art] ?? 'var(--mist)';
+}
 
 export function PromoTile({p, wide}: {p: Promo; wide?: boolean}) {
   const {open} = useUI();
-  const Icon = PROMO_ICON[p.id];
   return (
     <button type="button" className={`tile tile--${p.tone} ${wide ? 'promo-row' : 'promo-tile'}`} onClick={() => open({k: 'promo', id: p.id})}>
       <span className="tile__kick">{T(p.kick)}</span>
       <span className="tile__t">{T(p.title)}</span>
       <span className="tile__s">{T(p.text)}</span>
-      {p.photo ? <img className="tile__photo" src={img(p.photo)} alt="" loading="lazy" width={300} height={300} /> : Icon && <Icon className="tile__icon" />}
+      <Art name={p.art} className="tile__art" style={{color: artColor(p)}} />
     </button>
   );
 }
