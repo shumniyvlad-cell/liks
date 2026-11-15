@@ -48,17 +48,19 @@ function cafeHour() {
 }
 
 /* ── ограничение частоты: в памяти процесса, его хватает на одну кофейню ── */
-const hits = new Map<string, number[]>();
+// Окно хранится с ключом: уборка удаляет запись только когда истекло её собственное окно
+// (иначе суточный лимит на номер сбрасывался бы через час).
+const hits = new Map<string, {win: number; ts: number[]}>();
 function limit(key: string, max: number, windowMs: number) {
   const now = Date.now();
-  const arr = (hits.get(key) ?? []).filter((t) => now - t < windowMs);
-  if (arr.length >= max) throw new Bad('Слишком много попыток. Подождите немного и попробуйте снова.', 429);
-  arr.push(now);
-  hits.set(key, arr);
+  const ts = (hits.get(key)?.ts ?? []).filter((t) => now - t < windowMs);
+  if (ts.length >= max) throw new Bad('Слишком много попыток. Подождите немного и попробуйте снова.', 429);
+  ts.push(now);
+  hits.set(key, {win: windowMs, ts});
 }
 setInterval(() => {
   const now = Date.now();
-  for (const [k, v] of hits) if (v.every((t) => now - t > 3600e3)) hits.delete(k);
+  for (const [k, v] of hits) if (v.ts.every((t) => now - t > v.win)) hits.delete(k);
 }, 600e3).unref();
 
 const ip = (c: Context) => (c.req.header('x-forwarded-for') ?? '').split(',')[0].trim() || 'local';
