@@ -10,7 +10,7 @@ export const cafe = {
   address: '', // улица и дом, например «ул. Ленинградская, 71»
   phone: '', // +7…
   open: 8,
-  close: 22,
+  close: 20,
   deliveryFreeFrom: 800,
   deliveryFee: 149,
   deliveryRadius: '2 км',
