@@ -4,7 +4,7 @@ import {useToast} from '@astryxdesign/core/Toast';
 import {BookOpenIcon, TagIcon, UserIcon} from '@heroicons/react/24/outline';
 import {BookOpenIcon as BookSolid, TagIcon as TagSolid, UserIcon as UserSolid} from '@heroicons/react/24/solid';
 import {byId} from './business';
-import {cartCount, plural, rub, totals, useStore} from './store';
+import {cartCount, plural, refreshMe, rub, totals, useStore} from './store';
 import {UICtx, type Sheet, type TabId, type UI} from './ui/ctx';
 import {CupIcon, CupSolid} from './ui/icons';
 import {useSheetBack} from './useSheetBack';
@@ -31,6 +31,9 @@ export default function App() {
   const s = useStore();
   const showToast = useToast();
   const n = cartCount(s);
+
+  // Баллы и чашки могли начислить на кассе: при запуске берём свежие с сервера.
+  useEffect(() => void refreshMe(), []);
 
   // Вкладка живёт в адресе: ссылку можно отправить, «Назад» работает как в приложении.
   useEffect(() => {

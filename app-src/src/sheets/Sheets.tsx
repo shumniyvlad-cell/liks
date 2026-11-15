@@ -18,7 +18,7 @@ import {Art} from '../ui/brand';
 import {artColor} from '../ui/parts';
 import {byId, cafe, img, MODES, PROMOS, SUB, type Item, type ModeId, type Opt, type OptKey} from '../business';
 import {
-  addToCart, changeQty, cutlery, drinksInCart, get, giftReady, isOpen, optText, photoOf, placeOrder, plural, rub, set, signIn,
+  addToCart, changeQty, cutlery, drinksInCart, get, giftReady, isOpen, optText, photoOf, placeOrder, plural, requestCode, rub, saveBday, set, signIn,
   stage, T, totals, unitPrice, useStore, vibrate, type Choice, type Pay,
 } from '../store';
 import {useUI, type Sheet} from '../ui/ctx';
@@ -169,8 +169,9 @@ function slots() {
 
 function CartSheet() {
   const s = useStore();
-  const {open, close, go} = useUI();
+  const {open, close, go, toast} = useUI();
   const [err, setErr] = useState<Err>(null);
+  const [sending, setSending] = useState(false);
   const plateRef = useRef<HTMLInputElement>(null);
   const regionRef = useRef<HTMLInputElement>(null);
   const errBox = useRef<HTMLDivElement>(null);
@@ -205,8 +206,12 @@ function CartSheet() {
       return;
     }
     if (pay === 'cash') {
-      placeOrder('на кассе');
-      return open({k: 'status', fresh: true});
+      setSending(true);
+      placeOrder('на кассе')
+        .then(() => open({k: 'status', fresh: true}))
+        .catch((e: Error) => toast(e.message))
+        .finally(() => setSending(false));
+      return;
     }
     open({k: 'pay', via: pay});
   };
@@ -363,7 +368,7 @@ function CartSheet() {
       <Foot>
         <Button
           label={`${u ? (pay === 'cash' ? 'Отправить заказ' : 'Оплатить') : 'Войти и оформить'} ${rub(t.total)}`}
-          variant="primary" size="lg" width="100%" onClick={checkout}
+          variant="primary" size="lg" width="100%" isLoading={sending} onClick={checkout}
         />
       </Foot>
       <Button label="Добавить ещё" variant="ghost" width="100%" onClick={() => (close(), go('menu'))} />
@@ -389,14 +394,20 @@ function AuthSheet({then}: {then: Sheet | null}) {
   const {open} = useUI();
   const [phone, setPhone] = useState('+7 ');
   const [name, setName] = useState('');
-  const [bad, setBad] = useState(false);
+  const [bad, setBad] = useState<string | false>(false);
+  const [busy, setBusy] = useState(false);
   const send = () => {
+    if (busy) return;
     if (phone.replace(/\D/g, '').length !== 11) {
-      setBad(true);
+      setBad('Номер из 10 цифр после +7.');
       vibrate([10, 40, 10]);
       return;
     }
-    open({k: 'code', phone, name: name.trim().slice(0, 30), then});
+    setBusy(true);
+    requestCode(phone)
+      .then(() => open({k: 'code', phone, name: name.trim().slice(0, 30), then}))
+      .catch((e: Error) => setBad(e.message))
+      .finally(() => setBusy(false));
   };
   return (
     <VStack gap={4}>
@@ -405,12 +416,12 @@ function AuthSheet({then}: {then: Sheet | null}) {
         <Text color="secondary">{T('Пришлём код в СМС. Номер нужен, чтобы сообщить о готовности заказа и копить баллы.')}</Text>
       </VStack>
       <TextInput label="Телефон" type="tel" autoComplete="tel" hasAutoFocus value={phone} onEnter={send}
-        status={bad ? {type: 'error', message: 'Номер из 10 цифр после +7.'} : undefined}
+        status={bad ? {type: 'error', message: bad} : undefined}
         onChange={(v) => (setBad(false), setPhone(mask(v)))} />
       <TextInput label="Как к вам обращаться" autoComplete="given-name" isOptional value={name} onChange={setName} onEnter={send} />
       <Text color="secondary" size="sm">{T('Нажимая кнопку, вы соглашаетесь получать СМС о заказах.')}</Text>
       <Foot>
-        <Button label="Получить код" variant="primary" size="lg" width="100%" onClick={send} />
+        <Button label="Получить код" variant="primary" size="lg" width="100%" isLoading={busy} onClick={send} />
       </Foot>
     </VStack>
   );
@@ -419,6 +430,8 @@ function AuthSheet({then}: {then: Sheet | null}) {
 function CodeSheet({phone, name, then}: {phone: string; name: string; then?: Sheet | null}) {
   const {open, close, toast} = useUI();
   const [v, setV] = useState(['', '', '', '']);
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
   const ins = useRef<(HTMLInputElement | null)[]>([]);
   useEffect(() => {
     const t = setTimeout(() => ins.current[0]?.focus(), 350);
@@ -431,12 +444,23 @@ function CodeSheet({phone, name, then}: {phone: string; name: string; then?: She
     else next[i] = d;
     setV(next);
     if (d && ins.current[i + 1] && d.length === 1) ins.current[i + 1]!.focus();
-    if (next.every(Boolean)) {
-      signIn(phone, name);
-      vibrate(10);
-      toast(name ? `${name}, добро пожаловать` : 'Вы вошли');
-      if (then) open(then);
-      else close();
+    if (d) setErr('');
+    if (next.every(Boolean) && !busy) {
+      setBusy(true);
+      signIn(phone, name, next.join(''))
+        .then(() => {
+          vibrate(10);
+          toast(name ? `${name}, добро пожаловать` : 'Вы вошли');
+          if (then) open(then);
+          else close();
+        })
+        .catch((e: Error) => {
+          setErr(e.message);
+          setV(['', '', '', '']);
+          vibrate([10, 40, 10]);
+          setTimeout(() => ins.current[0]?.focus(), 30);
+        })
+        .finally(() => setBusy(false));
     }
   };
   return (
@@ -452,6 +476,7 @@ function CodeSheet({phone, name, then}: {phone: string; name: string; then?: She
             onKeyDown={(e) => e.key === 'Backspace' && !c && ins.current[i - 1]?.focus()} />
         ))}
       </div>
+      {err && <span className="field-err" role="alert">{err}</span>}
       {cafe.testMode && <span className="test-note">Тестовый режим: подойдёт любой код.</span>}
       <Button label="Изменить номер" variant="ghost" onClick={() => open({k: 'auth', then})} />
     </VStack>
@@ -501,14 +526,23 @@ function PaySheet({via}: {via: 'sbp' | 'card'}) {
 }
 
 function PayingSheet() {
-  const {open} = useUI();
+  const {open, toast} = useUI();
   useEffect(() => {
+    let live = true;
     const t = setTimeout(() => {
-      placeOrder(sessionStorage.getItem('liks:how') ?? 'онлайн');
-      open({k: 'status', fresh: true});
+      placeOrder(sessionStorage.getItem('liks:how') ?? 'онлайн')
+        .then(() => live && open({k: 'status', fresh: true}))
+        .catch((e: Error) => {
+          if (!live) return;
+          toast(e.message);
+          open({k: 'cart'});
+        });
     }, 1300);
-    return () => clearTimeout(t);
-  }, [open]);
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
+  }, [open, toast]);
   return (
     <VStack gap={2} paddingBlock={4}>
       <div className="spin" aria-hidden="true" />
@@ -626,11 +660,14 @@ function BdaySheet() {
         label={user.bday ? 'Дата сохранена' : 'Сохранить'}
         isDisabled={!!user.bday || !v}
         variant="primary" size="lg" width="100%"
-        onClick={() => {
-          set({user: {...user, bday: v!}});
-          close();
-          toast('Дата сохранена');
-        }}
+        onClick={() =>
+          saveBday(v!)
+            .then(() => {
+              close();
+              toast('Дата сохранена');
+            })
+            .catch((e: Error) => toast(e.message))
+        }
       />
     </VStack>
   );

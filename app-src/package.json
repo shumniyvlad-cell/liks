@@ -9,13 +9,19 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "publish": "npm run build && rm -rf ../assets ../img && cp -R dist/. ../",
-    "draft": "npm run build && rm -rf ../draft && cp -R dist ../draft"
+    "draft": "npm run build && rm -rf ../draft && cp -R dist ../draft",
+    "build:server": "tsc -b && vite build --config vite.server.config.ts",
+    "build:app": "tsc -b && VITE_BACKEND=server vite build --outDir dist-server-app",
+    "dev:api": "node --env-file=.env.local server-dist/main.js"
   },
   "dependencies": {
     "@astryxdesign/core": "^0.7.16",
     "@astryxdesign/theme-neutral": "^0.7.16",
     "@heroicons/react": "^2.2.0",
+    "@hono/node-server": "^2.1.8",
     "@stylexjs/stylex": "^0.19.2",
+    "hono": "^4.13.18",
+    "postgres": "^4.1.1",
     "qrcode-generator": "^1.4.4",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"

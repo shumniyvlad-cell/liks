@@ -10,7 +10,7 @@ import {
   QrCodeIcon, ClockIcon, CakeIcon, ShareIcon, PhoneIcon, ArrowRightStartOnRectangleIcon, ChevronRightIcon,
 } from '@heroicons/react/24/outline';
 import {cafe, LEVELS} from '../business';
-import {get, level, plural, set, T, useStore, type Mode} from '../store';
+import {level, plural, set, signOut, T, useStore, type Mode} from '../store';
 import {useToast} from '@astryxdesign/core/Toast';
 import {useUI} from '../ui/ctx';
 import {LoyaltyCard} from '../ui/LoyaltyCard';
@@ -130,11 +130,10 @@ export function Profile() {
             label="Выйти"
             startContent={<ArrowRightStartOnRectangleIcon {...ic} />}
             onClick={() => {
-              const prev = get();
-              set({user: null, order: null});
+              const undo = signOut();
               showToast({
                 body: 'Вы вышли. Баллы и чашки сохранены за номером',
-                endContent: <Button label="Вернуть" variant="ghost" size="sm" onClick={() => set({user: prev.user, order: prev.order})} />,
+                endContent: <Button label="Вернуть" variant="ghost" size="sm" onClick={undo} />,
               });
             }}
           />

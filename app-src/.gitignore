@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# сервер
+server-dist
+dist-server-app
+.env
+.env.*

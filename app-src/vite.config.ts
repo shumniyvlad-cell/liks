@@ -7,6 +7,8 @@ export default defineConfig({
   base: './',
   build: {outDir: 'dist', emptyOutDir: true},
   plugins: [react()],
+  // npm run dev с VITE_BACKEND=server ходит в локальный сервер (npm run dev:api) на :8787.
+  server: {proxy: {'/api': {target: 'http://127.0.0.1:8787', changeOrigin: false}}},
   resolve: { dedupe: ['react', 'react-dom'] },
   // Все компоненты Astryx собираем заранее одним пакетом. Иначе Vite находит новый компонент
   // в отложенном экране на лету, пересобирает зависимости, и в странице оказываются две копии React
