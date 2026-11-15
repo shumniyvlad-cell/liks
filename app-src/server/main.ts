@@ -53,6 +53,7 @@ function cafeHour() {
 const hits = new Map<string, {win: number; ts: number[]}>();
 function limit(key: string, max: number, windowMs: number) {
   const now = Date.now();
+  key += '@' + windowMs; // у каждого окна своя история, лимиты не мешают друг другу
   const ts = (hits.get(key)?.ts ?? []).filter((t) => now - t < windowMs);
   if (ts.length >= max) throw new Bad('Слишком много попыток. Подождите немного и попробуйте снова.', 429);
   ts.push(now);
@@ -63,7 +64,8 @@ setInterval(() => {
   for (const [k, v] of hits) if (v.ts.every((t) => now - t > v.win)) hits.delete(k);
 }, 600e3).unref();
 
-const ip = (c: Context) => (c.req.header('x-forwarded-for') ?? '').split(',')[0].trim() || 'local';
+// Перед сервером только свой Caddy: он сам ставит адрес клиента последним в X-Forwarded-For, берём его.
+const ip = (c: Context) => (c.req.header('x-forwarded-for') ?? '').split(',').pop()!.trim() || 'local';
 
 /* ── гость ── */
 type Row = {id: string; phone: string; name: string; bday: Date | null; points: number; stamps: number; sub: number; card: string};
@@ -164,8 +166,8 @@ app.post('/auth/code', async (c) => {
   const {phone: raw} = await c.req.json<{phone?: string}>();
   const phone = normPhone(raw);
   if (AUTH_TEST && !TEST_PHONES.has(phone)) throw new Bad('Вход пока открыт только для тестовых номеров: кофейня подключает СМС.', 403, 'phone');
-  limit('ip:' + ip(c), 10, 3600e3);
-  limit('code:' + phone, 5, 3600e3);
+  limit('code-ip:' + ip(c), 10, 3600e3);
+  limit('code-phone:' + phone, 5, 3600e3);
   const [prev] = await sql<{sent_at: Date}[]>`select sent_at from auth_codes where phone = ${phone}`;
   if (prev && Date.now() - prev.sent_at.getTime() < 60e3) throw new Bad('Код уже отправлен. Новый можно запросить через минуту.', 429);
   const code = String(randomInt(10000)).padStart(4, '0');
@@ -183,8 +185,8 @@ app.post('/auth/verify', async (c) => {
   const code = String(b.code ?? '');
   if (!/^\d{4}$/.test(code)) throw new Bad('Код из четырёх цифр.');
   if (AUTH_TEST && !TEST_PHONES.has(phone)) throw new Bad('Вход пока открыт только для тестовых номеров.', 403);
-  limit('verify:' + ip(c), 30, 3600e3);
-  limit('verify:' + phone, 15, 86400e3);
+  limit('verify-ip:' + ip(c), 30, 3600e3);
+  limit('verify-phone:' + phone, 15, 86400e3);
   // Попытку засчитываем атомарно до сравнения: параллельные запросы не обойдут лимит в пять.
   const [row] = await sql<{code_hash: string}[]>`
     update auth_codes set attempts = attempts + 1
@@ -234,7 +236,7 @@ app.patch('/me', async (c) => {
 
 app.post('/orders', async (c) => {
   const id = await needUser(c);
-  limit('order:' + id, 20, 3600e3);
+  limit('order-user:' + id, 20, 3600e3);
   const b = await c.req.json<Record<string, unknown>>();
   if (!Array.isArray(b.cart) || !b.cart.length) throw new Bad('Корзина пустая.');
   if (b.cart.length > 30) throw new Bad('Слишком много позиций в одном заказе.');
