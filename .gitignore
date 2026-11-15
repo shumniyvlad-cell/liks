@@ -3,3 +3,5 @@ assets/1.webp
 assets/2.webp
 assets/bar.jpg
 .DS_Store
+app-src/node_modules/
+app-src/node_modules/.vite/
