@@ -4,6 +4,7 @@
 #   HOST=root@<ip> ./deploy/deploy.sh --setup     # первый раз
 #   HOST=root@<ip> ./deploy/deploy.sh             # обновление
 # Свой домен: DOMAIN=liks.ru ./deploy/deploy.sh --setup (DNS уже должен смотреть на сервер).
+# Кто может войти на стенде без СМС: TEST_PHONES=+79001234567,+79007654321.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 : "${HOST:?нужен HOST=root@<ip>}"
@@ -23,7 +24,7 @@ require("fs").writeFileSync("server-dist/package.json", JSON.stringify({name: "l
 if [[ ${1:-} == --setup ]]; then
   echo "== Настройка сервера"
   "${SSH[@]}" "$HOST" 'cat > /root/liks-setup.sh' < deploy/server-setup.sh
-  "${SSH[@]}" "$HOST" "DOMAIN=${DOMAIN:-} bash /root/liks-setup.sh"
+  "${SSH[@]}" "$HOST" "DOMAIN=${DOMAIN:-} TEST_PHONES=${TEST_PHONES:-} bash /root/liks-setup.sh"
 fi
 
 echo "== Файлы"

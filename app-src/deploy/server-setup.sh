@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Ликс: чистый Ubuntu 24.04 → Postgres 16, Node 22, Caddy с HTTPS, юнит API, бэкапы.
-# Запускать от root: DOMAIN=liks.example.ru bash server-setup.sh (без DOMAIN — <ip>.sslip.io).
+# Запускать от root: DOMAIN=liks.example.ru TEST_PHONES=+79001234567 bash server-setup.sh (без DOMAIN — <ip>.sslip.io).
 # Повторный запуск безопасен: каждый шаг проверяет, сделан ли он. Секреты пишутся в /etc/liks/server.env
 # и в чат не выводятся.
 set -euo pipefail
@@ -61,10 +61,14 @@ if [[ ! -f $ENV ]]; then
 DATABASE_URL=postgres://liks:${DBPASS}@127.0.0.1:5432/liks
 SECRET=$(openssl rand -hex 32)
 STAFF_KEY=$(openssl rand -hex 12)
-# Пока СМС не подключены, подходит любой код. Подключить: SMS_PROVIDER=smsru, SMSRU_API_ID=..., AUTH_TEST=0
+# Стенд: пока СМС не подключены, входят только номера из TEST_PHONES (через запятую) с любым кодом,
+# остальным вход закрыт. На бой: SMS_PROVIDER=smsru, SMSRU_API_ID=..., AUTH_TEST=0.
 AUTH_TEST=1
+TEST_PHONES=${TEST_PHONES:-}
 SMS_PROVIDER=
 SMSRU_API_ID=
+# Стенд: онлайн-оплата засчитывается сразу. На бой — 0 и подтверждение от банка.
+PAY_TEST=1
 PORT=8787
 EOF
   chown root:liks $ENV && chmod 0640 $ENV

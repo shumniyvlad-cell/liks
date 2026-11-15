@@ -51,6 +51,9 @@ export async function migrate() {
       totals jsonb not null,
       total int not null
     );
+    alter table orders add column if not exists spend jsonb not null default '{}';
+    alter table orders add column if not exists credit jsonb not null default '{}';
+    alter table orders add column if not exists credited boolean not null default false;
     create index if not exists orders_user_idx on orders (user_id, created_at desc);
     create index if not exists orders_day_idx on orders (created_at desc);
   `);

@@ -147,5 +147,9 @@ export function buildOrder(s: Calc, t: Totals, how: string, no: number, at: numb
     points: u.points - t.pts + t.earn,
     stamps: Math.min(5, st),
     sub: u.sub - (subUsed ? 1 : 0) + subBought * 20,
+    /** Списывается сразу при заказе: баллы, пять чашек за подарок, чашка абонемента. */
+    spend: {points: t.pts, stamps: giftUsed ? 5 : 0, sub: subUsed ? 1 : 0},
+    /** Начисляется только после оплаты: кешбэк, новые чашки, купленный абонемент. */
+    credit: {points: t.earn, stamps: giftUsed ? Math.max(0, coffeeCount - 1) : coffeeCount - (subUsed ? 1 : 0), sub: subBought * 20},
   };
 }

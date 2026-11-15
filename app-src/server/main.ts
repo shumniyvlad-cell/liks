@@ -9,6 +9,7 @@ import {bodyLimit} from 'hono/body-limit';
 import {deleteCookie, getCookie, setCookie} from 'hono/cookie';
 import {byId, cafe, MENU, MODES, SUB, type Item, type ModeId, type OptKey} from '../src/business';
 import {buildOrder, totals, unitPrice, type Calc, type Choice, type Line, type PastOrder, type User} from '../src/pricing';
+import type postgres from 'postgres';
 import {migrate, sql} from './db';
 import {sendSms} from './sms';
 import {Bad} from './bad';
@@ -16,6 +17,11 @@ import {Bad} from './bad';
 const env = process.env;
 const SECRET = env.SECRET ?? '';
 const AUTH_TEST = env.AUTH_TEST === '1';
+// Тестовый вход (любой код, СМС не шлём) — только для номеров из TEST_PHONES. Остальным вход закрыт,
+// пока не подключены СМС: иначе любой зашёл бы под чужим номером и увидел чужие баллы и заказы.
+const TEST_PHONES = new Set((env.TEST_PHONES ?? '').split(',').map((p) => p.replace(/\D/g, '').replace(/^8/, '7')).filter((p) => p.length === 11).map((p) => '+' + p));
+// Тестовая оплата: заказ онлайн считается оплаченным сразу. Только для стенда, на бою — подтверждение банка.
+const PAY_TEST = env.PAY_TEST === '1';
 const STAFF_KEY = env.STAFF_KEY ?? '';
 const COOKIE = 'liks_s';
 const SESSION_DAYS = 180;
@@ -93,6 +99,14 @@ async function needUser(c: Context) {
 
 const newCard = () => 'LX' + Array.from({length: 6}, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[randomInt(32)]).join('');
 
+/** Начисление за оплаченный заказ — ровно один раз. */
+async function credit(tx: postgres.TransactionSql, orderId: string) {
+  const [o] = await tx<{user_id: string; credit: {points: number; stamps: number; sub: number}}[]>`
+    update orders set credited = true where id = ${orderId} and paid and not credited returning user_id, credit`;
+  if (!o) return;
+  await tx`update users set points = points + ${o.credit.points ?? 0}, stamps = least(5, stamps + ${o.credit.stamps ?? 0}), sub = sub + ${o.credit.sub ?? 0} where id = ${o.user_id}`;
+}
+
 /* ── заказ: проверка того, что пришло из браузера ── */
 const PLATE = /^[АВЕКМНОРСТУХ]\d{3}[АВЕКМНОРСТУХ]{2}$/;
 const str = (v: unknown, max: number) => String(v ?? '').trim().slice(0, max);
@@ -147,7 +161,9 @@ app.get('/health', async (c) => {
 app.post('/auth/code', async (c) => {
   const {phone: raw} = await c.req.json<{phone?: string}>();
   const phone = normPhone(raw);
+  if (AUTH_TEST && !TEST_PHONES.has(phone)) throw new Bad('Вход пока открыт только для тестовых номеров: кофейня подключает СМС.', 403, 'phone');
   limit('ip:' + ip(c), 10, 3600e3);
+  limit('code:' + phone, 5, 3600e3);
   const [prev] = await sql<{sent_at: Date}[]>`select sent_at from auth_codes where phone = ${phone}`;
   if (prev && Date.now() - prev.sent_at.getTime() < 60e3) throw new Bad('Код уже отправлен. Новый можно запросить через минуту.', 429);
   const code = String(randomInt(10000)).padStart(4, '0');
@@ -164,15 +180,19 @@ app.post('/auth/verify', async (c) => {
   const phone = normPhone(b.phone);
   const code = String(b.code ?? '');
   if (!/^\d{4}$/.test(code)) throw new Bad('Код из четырёх цифр.');
+  if (AUTH_TEST && !TEST_PHONES.has(phone)) throw new Bad('Вход пока открыт только для тестовых номеров.', 403);
   limit('verify:' + ip(c), 30, 3600e3);
-  const [row] = await sql<{code_hash: string; expires_at: Date; attempts: number}[]>`select * from auth_codes where phone = ${phone}`;
-  if (!row || row.expires_at.getTime() < Date.now()) throw new Bad('Код устарел. Нажмите «Изменить номер» и запросите новый.');
-  if (row.attempts >= 5) throw new Bad('Пять неверных кодов подряд. Запросите новый.', 429);
-  if (!AUTH_TEST && !same(row.code_hash, hash(phone + code))) {
-    await sql`update auth_codes set attempts = attempts + 1 where phone = ${phone}`;
-    throw new Bad('Код не подошёл. Проверьте СМС и введите ещё раз.');
-  }
-  await sql`delete from auth_codes where phone = ${phone}`;
+  limit('verify:' + phone, 15, 86400e3);
+  // Попытку засчитываем атомарно до сравнения: параллельные запросы не обойдут лимит в пять.
+  const [row] = await sql<{code_hash: string}[]>`
+    update auth_codes set attempts = attempts + 1
+    where phone = ${phone} and attempts < 5 and expires_at > now()
+    returning code_hash`;
+  if (!row) throw new Bad('Код устарел или введён неверно пять раз. Нажмите «Изменить номер» и запросите новый.', 429);
+  if (!AUTH_TEST && !same(row.code_hash, hash(phone + code))) throw new Bad('Код не подошёл. Проверьте СМС и введите ещё раз.');
+  // Код одноразовый: удалить может только один запрос, второй с тем же кодом не войдёт.
+  const used = await sql`delete from auth_codes where phone = ${phone} and code_hash = ${row.code_hash}`;
+  if (!used.count) throw new Bad('Код уже использован. Запросите новый.');
   const name = str(b.name, 30);
   const [u] = await sql<{id: string}[]>`
     insert into users (phone, name, card) values (${phone}, ${name}, ${newCard()})
@@ -249,11 +269,16 @@ app.post('/orders', async (c) => {
     const r = buildOrder(calc, t, how, no, Date.now());
     const details = {table: s.table, plate: s.plate, region: s.region, address, flat, when, extras: r.order.extras, comment: s.comment};
     const lines = cart.map(({id: i, o, qty, price}) => ({id: i, o, qty, price, name: byId(i).name}));
+    // Онлайн-оплату пока подтверждает только тестовый режим стенда; наличные — бариста, когда отдаст заказ.
+    const paid = pay !== 'cash' && PAY_TEST;
     await tx`
-      insert into orders (id, no, user_id, mode, how, pay, paid, items, lines, details, totals, total)
-      values (${next}, ${no}, ${id}, ${mode}, ${how}, ${pay}, ${pay !== 'cash' && cafe.testMode},
-        ${tx.json(r.order.items)}, ${tx.json(lines)}, ${tx.json(details)}, ${tx.json(t as never)}, ${t.total})`;
-    await tx`update users set points = ${r.points}, stamps = ${r.stamps}, sub = ${r.sub} where id = ${id}`;
+      insert into orders (id, no, user_id, mode, how, pay, paid, items, lines, details, totals, total, spend, credit)
+      values (${next}, ${no}, ${id}, ${mode}, ${how}, ${pay}, ${paid},
+        ${tx.json(r.order.items)}, ${tx.json(lines)}, ${tx.json(details)}, ${tx.json(t as never)}, ${t.total},
+        ${tx.json(r.spend)}, ${tx.json(r.credit)})`;
+    // Списываем сразу, чтобы одни баллы нельзя было потратить в двух заказах; начисляем только оплаченное.
+    await tx`update users set points = points - ${r.spend.points}, stamps = stamps - ${r.spend.stamps}, sub = sub - ${r.spend.sub} where id = ${id}`;
+    if (paid) await credit(tx, next);
     return r.order;
   });
   return c.json({order: result, user: await loadUser(id)});
@@ -275,8 +300,27 @@ app.get('/staff/orders', async (c) => {
 app.post('/staff/orders/:id', async (c) => {
   staff(c);
   const {status} = await c.req.json<{status?: string}>();
-  if (!['new', 'cooking', 'ready', 'done', 'cancelled'].includes(String(status))) throw new Bad('Неизвестный статус.');
-  await sql`update orders set status = ${String(status)} where id = ${c.req.param('id')}`;
+  const st = String(status);
+  if (!['new', 'cooking', 'ready', 'done', 'cancelled'].includes(st)) throw new Bad('Неизвестный статус.');
+  const oid = c.req.param('id');
+  if (!/^\d+$/.test(oid)) throw new Bad('Нет такого заказа.', 404);
+  await sql.begin(async (tx) => {
+    const [o] = await tx<{status: string; credited: boolean; user_id: string; spend: {points: number; stamps: number; sub: number}}[]>`
+      select status, credited, user_id, spend from orders where id = ${oid} for update`;
+    if (!o) throw new Bad('Нет такого заказа.', 404);
+    if (o.status === 'cancelled') throw new Bad('Заказ уже отменён.', 409);
+    if (st === 'cancelled') {
+      if (o.credited) throw new Bad('Заказ уже оплачен и закрыт, отменить его можно только возвратом.', 409);
+      // Отмена возвращает то, что списали при заказе.
+      await tx`update users set points = points + ${o.spend.points ?? 0}, stamps = least(5, stamps + ${o.spend.stamps ?? 0}), sub = sub + ${o.spend.sub ?? 0} where id = ${o.user_id}`;
+    }
+    // Отдал заказ — значит, на кассе оплачен: начисляем баллы и чашки.
+    if (st === 'done') {
+      await tx`update orders set paid = true where id = ${oid}`;
+      await credit(tx, oid);
+    }
+    await tx`update orders set status = ${st} where id = ${oid}`;
+  });
   return c.json({ok: true});
 });
 
