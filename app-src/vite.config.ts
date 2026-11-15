@@ -3,9 +3,9 @@ import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  // Черновик живёт в /liks/v2/: относительные пути, сборка в соседнюю папку репозитория.
+  // Относительные пути: сайт живёт в /liks/. Сборка в dist, на бой копирует npm run publish.
   base: './',
-  build: {outDir: '../v2', emptyOutDir: true},
+  build: {outDir: 'dist', emptyOutDir: true},
   plugins: [react()],
   resolve: { dedupe: ['react', 'react-dom'] },
   // Все компоненты Astryx собираем заранее одним пакетом. Иначе Vite находит новый компонент

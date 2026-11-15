@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ликс — кофейня в Вологде</title>
+<meta name="description" content="Кофе, завтраки и десерты кофейни Ликс в Вологде. Заказ без очереди, кофе к машине, доставка по району, карта гостя.">
+<meta name="theme-color" content="#FAF9F6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141110" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Ликс">
+<meta property="og:title" content="Ликс — кофейня в Вологде">
+<meta property="og:description" content="Закажите кофе без очереди, к машине или с доставкой. Первый заказ в приложении −20%.">
+<meta property="og:image" content="assets/og.jpg">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="preload" href="fonts/nunito-cyr.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css?v=3">
+</head>
+<body>
+<div id="app" class="app">
+  <div class="views">
+    <section class="view is-active" id="view-home" data-view="home" aria-label="Главная"></section>
+    <section class="view" id="view-menu" data-view="menu" aria-label="Меню"></section>
+    <section class="view" id="view-promos" data-view="promos" aria-label="Акции"></section>
+    <section class="view" id="view-profile" data-view="profile" aria-label="Профиль"></section>
+  </div>
+
+  <button class="cart-pill" id="cartPill" type="button" hidden>
+    <span class="cart-pill__count" id="cartCount">0</span>
+    <span class="cart-pill__label">Корзина</span>
+    <span class="cart-pill__sum" id="cartSum">0 ₽</span>
+  </button>
+
+  <nav class="tabbar" aria-label="Разделы">
+    <button class="tab is-active" data-tab="home" type="button">
+      <svg viewBox="0 0 28 28" aria-hidden="true"><path d="M5 13h16v3.5A7.5 7.5 0 0 1 13.5 24h-1A7.5 7.5 0 0 1 5 16.5Z"/><path d="M21 14.5h1.2a2.8 2.8 0 0 1 0 5.6H20"/><path d="M11 4.5c-1.6 1.4 1.6 2.6 0 4.6M15 4.5c-1.6 1.4 1.6 2.6 0 4.6"/></svg>
+      <span>Ликс</span>
+    </button>
+    <button class="tab" data-tab="menu" type="button">
+      <svg viewBox="0 0 28 28" aria-hidden="true"><path d="M6 7h16M6 14h16M6 21h10"/></svg>
+      <span>Меню</span>
+    </button>
+    <button class="tab" data-tab="promos" type="button">
+      <svg viewBox="0 0 28 28" aria-hidden="true"><path d="M4.5 14 14 4.5h9.5V14L14 23.5Z"/><circle cx="18.6" cy="9.4" r="1.6"/></svg>
+      <span>Акции</span>
+    </button>
+    <button class="tab" data-tab="profile" type="button">
+      <svg viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="10" r="4.5"/><path d="M5.5 23.5c1.4-4.2 4.6-6.3 8.5-6.3s7.1 2.1 8.5 6.3"/></svg>
+      <span>Профиль</span>
+    </button>
+  </nav>
+</div>
+
+<div class="sheet-layer" id="sheetLayer" hidden>
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet__grab" id="sheetGrab"><span></span></div>
+    <button class="sheet__close" id="sheetClose" type="button" aria-label="Закрыть">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"/></svg>
+    </button>
+    <div class="sheet__body" id="sheetBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="vendor/qrcode.min.js"></script>
+<script src="app.js?v=3"></script>
+</body>
+</html>

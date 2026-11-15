@@ -1,7 +1,8 @@
-gen/*.raw
-assets/1.webp
-assets/2.webp
-assets/bar.jpg
+v1/gen/*.raw
+v1/assets/1.webp
+v1/assets/2.webp
+v1/assets/bar.jpg
 .DS_Store
 app-src/node_modules/
-app-src/node_modules/.vite/
+app-src/dist/
+app-src/preview-*.jpg
