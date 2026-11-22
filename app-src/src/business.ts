@@ -34,6 +34,8 @@ export type Item = {
   hit?: boolean;
   morning?: boolean;
   noDiscount?: boolean;
+  /** В меню есть, цену кофейня ещё уточняет: показываем «Цена скоро», заказать нельзя. */
+  soon?: boolean;
   opts?: Partial<Record<OptKey, Opt[]>> & {shot?: boolean; warm?: boolean};
 };
 
@@ -86,6 +88,7 @@ export const MENU: Item[] = [
   {id: 'croque', cat: 'sandwich', name: 'Крок мадам с ветчиной', desc: 'Горячий тост с ветчиной и сыром, сверху яичница.', photo: 'croque', price: 550, hit: true},
   {id: 'sandwich-salmon', cat: 'sandwich', name: 'Сэндвич с лососем и шпинатом', desc: 'Слабосолёный лосось, шпинат и крем-сыр.', photo: 'sandwich-salmon', price: 480},
   {id: 'sandwich-ham', cat: 'sandwich', name: 'Сэндвич с ветчиной и сыром', desc: 'Ветчина, сыр и свежий салат на поджаренном хлебе.', photo: 'sandwich-ham', price: 480},
+  {id: 'shawarma', cat: 'sandwich', name: 'Шаурма', desc: 'Курица, капуста, морковь, огурец и соус в томатной лепёшке.', photo: 'shawarma', price: 0, soon: true},
   {id: 'sandwich-tuna', cat: 'sandwich', name: 'Сэндвич с тунцом', desc: 'Тунец, томат и руккола на поджаренном хлебе.', photo: 'sandwich-tuna', price: 490},
 
   {id: 'salad-tuna', cat: 'salad', name: 'Салат с тунцом', desc: 'Тунец, яйцо, печёный картофель, томаты и микс салата.', photo: 'salad-tuna', price: 490},
@@ -103,7 +106,7 @@ export const SUB: Item = {
 
 export const byId = (id: string) => (id === SUB.id ? SUB : MENU.find((m) => m.id === id))!;
 /** Есть ли позиция в нынешнем меню: в старых корзинах и заказах могут быть снятые блюда. */
-export const inMenu = (id: string) => id === SUB.id || MENU.some((m) => m.id === id);
+export const inMenu = (id: string) => id === SUB.id || MENU.some((m) => m.id === id && !m.soon);
 
 export type ModeId = 'hall' | 'togo' | 'car' | 'delivery';
 export const MODES: Record<ModeId, {name: string; note: string}> = {

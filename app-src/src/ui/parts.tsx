@@ -62,22 +62,24 @@ export function DishTile({m}: {m: Item}) {
   const q = cartQty(m.id, s);
   return (
     <article className="dish-card">
-      <button type="button" className="dish" onClick={() => open({k: 'dish', id: m.id})} aria-label={`${m.name}, ${m.opts?.size ? 'от ' : ''}${rub(m.price)}`}>
+      <button type="button" className="dish" onClick={() => open({k: 'dish', id: m.id})} aria-label={`${m.name}, ${priceText(m)}`}>
         <span className="dish__img">
           <img src={img(m.photo)} alt="" loading="lazy" width={380} height={475} />
           {m.tag && <span className="dish__tag">{m.tag}</span>}
         </span>
         <span className="dish__name">{T(m.name)}</span>
         <span className="dish__price">
-          {m.opts?.size ? 'от ' : ''}
-          {rub(m.price)}
+          {priceText(m)}
           {m.old && <s>{rub(m.old)}</s>}
         </span>
       </button>
-      <AddButton q={q} name={m.name} onAdd={() => add(m)} className="dish__add" />
+      {!m.soon && <AddButton q={q} name={m.name} onAdd={() => add(m)} className="dish__add" />}
     </article>
   );
 }
+
+/** Цена в карточке: «от» у напитков с размерами, «Цена скоро», пока кофейня её не назвала. */
+const priceText = (m: Item) => (m.soon ? 'Цена скоро' : `${m.opts?.size ? 'от ' : ''}${rub(m.price)}`);
 
 function AddButton({q, name, onAdd, className}: {q: number; name: string; onAdd: () => void; className: string}) {
   return (
@@ -101,14 +103,13 @@ export function DishRow({m}: {m: Item}) {
       <span className="mrow__t">
         <b>{T(m.name)}</b>
         <span>{T(m.desc)}</span>
-        <em>
-          {m.opts?.size ? 'от ' : ''}
-          {rub(m.price)}
+        <em className={m.soon ? 'is-soon' : undefined}>
+          {priceText(m)}
           {m.old && <s>{rub(m.old)}</s>}
         </em>
       </span>
       </button>
-      <AddButton q={q} name={m.name} onAdd={() => add(m)} className="addbtn" />
+      {m.soon ? <span className="addbtn-gap" aria-hidden="true" /> : <AddButton q={q} name={m.name} onAdd={() => add(m)} className="addbtn" />}
     </div>
   );
 }

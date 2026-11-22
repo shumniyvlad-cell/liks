@@ -134,8 +134,12 @@ function DishSheet({id}: {id: string}) {
       {m.opts?.warm && <Switch label="Подогреть" description="Бесплатно" labelPosition="start" labelSpacing="spread" value={!!o.warm} onChange={(v) => setO({...o, warm: v})} />}
       <Foot>
         <HStack gap={3} vAlign="center">
-          <Stepper value={qty} min={1} max={20} onChange={setQty} label="Количество" />
-          <Button label={`Добавить за ${rub(unitPrice(m, o) * qty)}`} variant="primary" size="lg" width="100%" onClick={add} />
+          {!m.soon && <Stepper value={qty} min={1} max={20} onChange={setQty} label="Количество" />}
+          {m.soon ? (
+            <Button label="Цена скоро, заказ откроется" variant="secondary" size="lg" width="100%" isDisabled />
+          ) : (
+            <Button label={`Добавить за ${rub(unitPrice(m, o) * qty)}`} variant="primary" size="lg" width="100%" onClick={add} />
+          )}
         </HStack>
       </Foot>
     </VStack>

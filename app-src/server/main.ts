@@ -120,6 +120,7 @@ function readLine(raw: unknown): Line {
   const id = String(r.id ?? '');
   const item: Item | undefined = id === SUB.id ? SUB : MENU.find((m) => m.id === id);
   if (!item) throw new Bad('В корзине есть позиция, которой больше нет в меню. Обновите страницу.');
+  if (item.soon) throw new Bad(`«${item.name}» пока нельзя заказать: кофейня уточняет цену.`);
   const qty = Number(r.qty);
   if (!Number.isInteger(qty) || qty < 1 || qty > 20) throw new Bad('Количество от 1 до 20.');
   const o: Choice = {};

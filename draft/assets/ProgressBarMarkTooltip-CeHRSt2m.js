@@ -1,0 +1,1 @@
+import{E as e}from"./index-BCi8fV1m.js";import{a as t}from"./focusOutline.stylex-CRHqjXz-.js";var n=t();function r({content:t,children:r}){return(0,n.jsx)(e,{content:t,placement:`above`,focusTrigger:`always`,children:r})}export{r as default};
