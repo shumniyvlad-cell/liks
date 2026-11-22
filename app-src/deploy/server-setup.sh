@@ -7,7 +7,8 @@ set -euo pipefail
 
 log() { echo "== $*"; }
 IP=$(curl -4 -fsS --max-time 10 https://ipv4.icanhazip.com 2>/dev/null || hostname -I | awk '{print $1}')
-DOMAIN=${DOMAIN:-${IP//./-}.sslip.io}
+SSLIP=${IP//./-}.sslip.io
+DOMAIN=${DOMAIN:-$SSLIP}
 export DEBIAN_FRONTEND=noninteractive
 
 log "Пакеты"
@@ -129,6 +130,15 @@ ${DOMAIN} {
 	}
 }
 EOF
+# Свой домен: www и временный адрес <ip>.sslip.io ведут на него, чтобы у сайта был один адрес.
+if [[ $DOMAIN != "$SSLIP" ]]; then
+  cat >> /etc/caddy/Caddyfile <<EOF
+
+www.${DOMAIN}, ${SSLIP} {
+	redir https://${DOMAIN}{uri} permanent
+}
+EOF
+fi
 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
 systemctl reload caddy || systemctl restart caddy
 
