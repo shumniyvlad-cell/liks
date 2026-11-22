@@ -266,7 +266,7 @@ app.post('/orders', async (c) => {
     const [u] = await tx<Row[]>`select * from users where id = ${id} for update`;
     const [{n}] = await tx<{n: number}[]>`select count(*)::int as n from orders where user_id = ${id}`;
     const calc: Calc = {...s, user: {name: u.name, phone: u.phone, points: u.points, stamps: u.stamps, sub: u.sub, orders: [], code: u.card, bday: '', count: n}};
-    const t = totals(calc, h);
+    const t = totals(calc);
     const [{next}] = await tx<{next: string}[]>`select nextval('orders_id_seq') as next`;
     const no = 100 + (Number(next) % 900);
     const how = str(b.how, 40) || (pay === 'cash' ? 'на кассе' : 'онлайн');

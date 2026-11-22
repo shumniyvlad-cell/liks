@@ -63,7 +63,7 @@ export function Menu() {
                 </Heading>
                 {c.id === 'breakfast' && (
                   <Text color="secondary" size="sm" display="block">
-                    {T(morning ? 'Завтраки весь день, сет по 490 ₽ до 12:00.' : 'Завтраки весь день. Сет по 490 ₽ вернётся завтра до 12:00.')}
+                    {T('Завтраки подаём весь день.')}
                   </Text>
                 )}
                 <div className="menu-list">

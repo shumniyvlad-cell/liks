@@ -18,7 +18,7 @@ import {Art} from '../ui/brand';
 import {artColor} from '../ui/parts';
 import {byId, cafe, img, MODES, PROMOS, SUB, type Item, type ModeId, type Opt, type OptKey} from '../business';
 import {
-  addToCart, changeQty, cutlery, drinksInCart, get, giftReady, isOpen, optText, photoOf, placeOrder, plural, requestCode, rub, saveBday, set, signIn,
+  addToCart, changeQty, cutlery, drinksInCart, get, giftReady, isOpen, optText, photoOf, placeOrder, plural, requestCode, rub, saveBday, set, signIn, validLine,
   stage, T, totals, unitPrice, useStore, vibrate, type Choice, type Pay,
 } from '../store';
 import {useUI, type Sheet} from '../ui/ctx';
@@ -118,7 +118,7 @@ function DishSheet({id}: {id: string}) {
       {GROUPS.map(([k, label]) => {
         const items = m.opts?.[k];
         if (!items) return null;
-        const title = k === 'sugar' && m.id === 'tea' ? 'Сладость' : label;
+        const title = k === 'sugar' && m.id.startsWith('tea') ? 'Сладость' : label;
         return (
           <VStack key={k} gap={2}>
             {k === 'drink' && (
@@ -653,7 +653,7 @@ function BdaySheet() {
     <VStack gap={4}>
       <VStack gap={1}>
         <Heading level={2}>День рождения</Heading>
-        <Text color="secondary">{T('Три дня до и три после десерт будет за наш счёт. Дату можно указать один раз.')}</Text>
+        <Text color="secondary">{T('Три дня до и три после капучино будет за наш счёт. Дату можно указать один раз.')}</Text>
       </VStack>
       <DateInput label="Дата рождения" value={v as never} max={new Date().toISOString().slice(0, 10) as never} placeholder="ДД.ММ.ГГГГ" onChange={(x) => setV(x)} />
       <Button
@@ -698,7 +698,9 @@ function HistorySheet() {
       <Button
         label="Повторить последний" variant="secondary" size="lg" width="100%"
         onClick={() => {
-          os[0].lines.forEach((l) => addToCart(l.id, l.o, l.qty));
+          const ok = os[0].lines.filter((l) => validLine(l.id, l.o));
+          if (!ok.length) return toast('Этих блюд больше нет в меню');
+          ok.forEach((l) => addToCart(l.id, l.o, l.qty));
           toast('Прошлый заказ в корзине');
           open({k: 'cart'});
         }}

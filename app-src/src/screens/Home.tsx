@@ -6,8 +6,8 @@ import {Text} from '@astryxdesign/core/Text';
 import {Button} from '@astryxdesign/core/Button';
 import {StatusDot} from '@astryxdesign/core/StatusDot';
 import {ClockIcon, MapPinIcon} from '@heroicons/react/24/outline';
-import {byId, cafe, img, MENU, MODES, PROMOS, type ModeId} from '../business';
-import {addToCart, isOpen, rub, set, stage, T, useStore, vibrate} from '../store';
+import {byId, cafe, img, inMenu, MENU, MODES, PROMOS, type ModeId} from '../business';
+import {addToCart, isOpen, rub, set, stage, T, useStore, validLine, vibrate} from '../store';
 import {useUI} from '../ui/ctx';
 import {CarIcon, MODE_ICON} from '../ui/icons';
 import {LoyaltyCard} from '../ui/LoyaltyCard';
@@ -62,7 +62,9 @@ export function Home() {
   };
   const repeat = () => {
     if (!last) return;
-    last.lines.forEach((l) => addToCart(l.id, l.o, l.qty));
+    const ok = last.lines.filter((l) => validLine(l.id, l.o));
+    if (!ok.length) return toast('Этих блюд больше нет в меню');
+    ok.forEach((l) => addToCart(l.id, l.o, l.qty));
     toast('Прошлый заказ в корзине');
     open({k: 'cart'});
   };
@@ -115,7 +117,7 @@ export function Home() {
             {last && (
               <button type="button" className="mrow" style={{marginTop: 8}} onClick={repeat}>
                 <span className="mrow__img">
-                  <img src={img(byId(last.lines[0]?.id ?? 'cappuccino').photo)} alt="" width={184} height={184} />
+                  <img src={img(byId(last.lines.find((l) => inMenu(l.id))?.id ?? 'cappuccino').photo)} alt="" width={184} height={184} />
                 </span>
                 <span className="mrow__t">
                   <b>Повторить прошлый заказ</b>
@@ -153,7 +155,7 @@ export function Home() {
             <Heading level={2} id="about-h">
               {T('Красная вывеска у парковки')}
             </Heading>
-            <Text color="secondary">{T('Маленькая кофейня с завтраками весь день и десертами к кофе. Можно зайти, а можно не выходить из машины.')}</Text>
+            <Text color="secondary">{T('Маленькая кофейня: завтраки весь день, сэндвичи, супы и кофе. Можно зайти, а можно не выходить из машины.')}</Text>
             <VStack gap={2} paddingBlock={1}>
               <span className="fact">
                 <ClockIcon aria-hidden="true" />

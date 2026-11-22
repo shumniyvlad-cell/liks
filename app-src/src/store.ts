@@ -2,7 +2,7 @@
 // (сборка VITE_BACKEND=server), в демо без сервера — тоже в браузере.
 
 import {useSyncExternalStore} from 'react';
-import {byId, cafe, type Item, type ModeId, type OptKey} from './business';
+import {byId, cafe, inMenu, type Item, type ModeId, type OptKey} from './business';
 import {api, online} from './api';
 import * as P from './pricing';
 import type {Choice, Line, Order, Pay, User} from './pricing';
@@ -40,9 +40,18 @@ const fresh: State = {
   theme: 'system', order: null,
 };
 
+/** Позиция есть в нынешнем меню и выбранные варианты у неё существуют. */
+export function validLine(id: string, o: Choice) {
+  if (!inMenu(id)) return false;
+  const it = byId(id);
+  return Object.entries(o).every(([k, v]) => k === 'shot' || k === 'warm' || (typeof v === 'number' && !!it.opts?.[k as OptKey]?.[v]));
+}
+
 function load(): State {
   try {
     const s = {...fresh, ...(JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<State>)};
+    // Меню обновилось: снятые позиции из сохранённой корзины убираем, цены берём нынешние.
+    s.cart = s.cart.filter((l) => validLine(l.id, l.o)).map((l) => ({...l, price: P.unitPrice(byId(l.id), l.o)}));
     const t = new URLSearchParams(location.search).get('table');
     if (t) Object.assign(s, {mode: 'hall', table: t.slice(0, 3)});
     return s;

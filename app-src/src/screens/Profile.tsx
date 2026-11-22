@@ -52,7 +52,7 @@ export function Profile() {
               <li>{T('−20% на первый заказ в приложении')}</li>
               <li>{T('Шестой кофе в подарок после пяти')}</li>
               <li>{T('До 10% заказа возвращается баллами')}</li>
-              <li>{T('Десерт в подарок на день рождения')}</li>
+              <li>{T('Капучино в подарок на день рождения')}</li>
             </ul>
             <Button label="Войти по номеру" variant="primary" size="lg" width="100%" onClick={() => open({k: 'auth'})} />
           </VStack>
@@ -120,7 +120,7 @@ export function Profile() {
           />
           <ListItem
             label="День рождения"
-            description={user.bday ? new Date(user.bday).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long'}) : 'Укажите, и десерт будет в подарок'}
+            description={user.bday ? new Date(user.bday).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long'}) : 'Укажите, и капучино будет в подарок'}
             startContent={<CakeIcon {...ic} />}
             endContent={chev}
             onClick={() => open({k: 'bday'})}

@@ -75,8 +75,8 @@ export const level = (u: User | null) => {
 };
 export const giftReady = (u: User | null) => (u?.stamps ?? 0) >= 5;
 
-const FOOD = ['breakfast', 'dessert', 'bakery'];
-export const isDrink = (it: Item) => !!it.coffee || it.cat === 'other' || it.id === 'combo';
+const FOOD = ['breakfast', 'sandwich', 'salad', 'soup'];
+export const isDrink = (it: Item) => !!it.coffee || it.cat === 'other';
 export const autoCutlery = (s: Calc) => Math.min(6, s.cart.filter((l) => FOOD.includes(byId(l.id).cat)).reduce((a, l) => a + l.qty, 0));
 export const cutlery = (s: Calc) => s.cutlery ?? autoCutlery(s);
 export const drinksInCart = (s: Calc) => s.cart.filter((l) => isDrink(byId(l.id))).reduce((a, l) => a + l.qty, 0);
@@ -90,20 +90,16 @@ export function extrasText(s: Calc) {
   return t.join(', ');
 }
 
-/** h — час по времени кофейни: в браузере часы телефона, на сервере московское время. */
-export function totals(s: Calc, h = nowH()) {
+export function totals(s: Calc) {
   const units = (pred: (it: Item) => boolean) => s.cart.flatMap((l) => (pred(byId(l.id)) ? Array<number>(l.qty).fill(l.price) : []));
   const sub = s.cart.reduce((a, l) => a + l.price * l.qty, 0);
   const disc: [string, number][] = [];
   const coffees = units((it) => !!it.coffee).sort((a, b) => a - b);
   if (s.useGift && giftReady(s.user) && coffees.length) disc.push(['Шестой кофе от нас', coffees[0]]);
   else if (s.useSub && (s.user?.sub ?? 0) > 0) {
-    const ok = units((it) => ['cappuccino', 'latte'].includes(it.id)).sort((a, b) => b - a);
-    if (ok.length) disc.push(['Чашка с абонемента', Math.min(ok[0], 270)]);
-  }
-  if (h >= 15 && h < 17) {
-    const ds = units((it) => !!it.dessert).sort((a, b) => a - b);
-    if (ds.length >= 2) disc.push(['Тихие часы: десерт −50%', Math.round(ds[0] / 2)]);
+    // Абонемент покрывает капучино S; за M гость доплачивает разницу.
+    const ok = units((it) => it.id === 'cappuccino').sort((a, b) => b - a);
+    if (ok.length) disc.push(['Чашка с абонемента', Math.min(ok[0], 260)]);
   }
   const discountable = s.cart.filter((l) => !byId(l.id).noDiscount).reduce((a, l) => a + l.price * l.qty, 0);
   const pre = disc.reduce((a, d) => a + d[1], 0);
@@ -122,7 +118,7 @@ export type Totals = ReturnType<typeof totals>;
 /** Заказ из корзины: что увидит гость и как поменяются баллы, чашки и абонемент. */
 export function buildOrder(s: Calc, t: Totals, how: string, no: number, at: number) {
   const u = s.user!;
-  const coffeeCount = s.cart.filter((l) => byId(l.id).coffee || l.id === 'combo').reduce((a, l) => a + l.qty, 0);
+  const coffeeCount = s.cart.filter((l) => byId(l.id).coffee).reduce((a, l) => a + l.qty, 0);
   const subBought = s.cart.filter((l) => l.id === 'sub20').reduce((a, l) => a + l.qty, 0);
   const giftUsed = t.disc.some((d) => d[0].startsWith('Шестой'));
   const subUsed = t.disc.some((d) => d[0].startsWith('Чашка'));
@@ -130,7 +126,7 @@ export function buildOrder(s: Calc, t: Totals, how: string, no: number, at: numb
   if (giftUsed) st = Math.max(0, st - 5) + Math.max(0, coffeeCount - 1);
   else st += coffeeCount - (subUsed ? 1 : 0);
   const steps = ({
-    hall: [['Заказ принят', 'Бариста уже видит его'], ['Готовим', 'Кофе, потом десерты'], [`Несём к столику №${s.table}`, 'Минута-другая']],
+    hall: [['Заказ принят', 'Бариста уже видит его'], ['Готовим', 'Сначала кофе, потом блюда'], [`Несём к столику №${s.table}`, 'Минута-другая']],
     togo: [['Заказ принят', 'Бариста уже видит его'], ['Готовим', 'Обычно 5–7 минут'], ['Готово, ждёт на стойке', 'Назовите номер заказа']],
     car: [['Заказ принят', 'Бариста уже видит его'], ['Готовим', 'Обычно 5–7 минут'], [`Выносим к машине ${s.plate} ${s.region}`, 'Смотрите в сторону входа']],
     delivery: [['Заказ принят', 'Бариста уже видит его'], ['Готовим', 'Кофе наливаем последним'], ['Курьер в пути', 'Обычно 20–30 минут'], ['Доставлено', 'Приятного аппетита']],
