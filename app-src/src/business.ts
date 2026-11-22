@@ -7,7 +7,7 @@ export const img = (k: string) => `${import.meta.env.BASE_URL}img/${k}.jpg`;
 export const cafe = {
   name: 'Ликс',
   city: 'Вологда',
-  address: '', // улица и дом, например «ул. Ленинградская, 71»
+  address: 'ул. Герцена, 124',
   phone: '', // +7…
   open: 8,
   close: 20,
