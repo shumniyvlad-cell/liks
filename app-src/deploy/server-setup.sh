@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ликс: чистый Ubuntu 24.04 → Postgres 16, Node 22, Caddy с HTTPS, юнит API, бэкапы.
+# Ликс: чистый Ubuntu 24.04/26.04 → Postgres 16, Node 22, Caddy с HTTPS, юнит API, бэкапы.
 # Запускать от root: DOMAIN=liks.example.ru TEST_PHONES=+79001234567 bash server-setup.sh (без DOMAIN — <ip>.sslip.io).
 # Повторный запуск безопасен: каждый шаг проверяет, сделан ли он. Секреты пишутся в /etc/liks/server.env
 # и в чат не выводятся.
@@ -12,7 +12,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 log "Пакеты"
 apt-get update -q
-apt-get install -y -q curl ca-certificates gnupg ufw fail2ban postgresql unattended-upgrades debian-keyring debian-archive-keyring apt-transport-https
+apt-get install -y -q curl ca-certificates gnupg ufw fail2ban postgresql unattended-upgrades
 
 log "Часовой пояс кофейни и своп"
 timedatectl set-timezone Europe/Moscow
