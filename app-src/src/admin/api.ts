@@ -31,7 +31,7 @@ export async function adm<T>(path: string, init: {method?: string; body?: unknow
   return data as T;
 }
 
-export type Sync = {at: number; ok: boolean; error?: string; full?: number};
+export type Sync = {at: number; ok: boolean; error?: string; full?: number; running?: boolean};
 
 export const rub = (n: number) => new Intl.NumberFormat('ru-RU', {maximumFractionDigits: 0}).format(Math.round(n)) + ' ₽';
 export const int = (n: number) => new Intl.NumberFormat('ru-RU', {maximumFractionDigits: 0}).format(n);

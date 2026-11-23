@@ -134,6 +134,31 @@ export async function migrate() {
       drawer numeric not null default 0
     );
 
+    -- Чек целиком (номер ФД, цены строк) догружается отдельным запросом.
+    alter table sigma_ops add column if not exists number text not null default '';
+    alter table sigma_ops add column if not exists full_at timestamptz;
+    -- Смена: кто открыл, сумма на открытие, внесения, инкассации, возвраты; raw — ответ кассы как есть.
+    alter table sigma_shifts add column if not exists cashier text not null default '';
+    alter table sigma_shifts add column if not exists open_amount numeric not null default 0;
+    alter table sigma_shifts add column if not exists cash_in numeric not null default 0;
+    alter table sigma_shifts add column if not exists collections numeric not null default 0;
+    alter table sigma_shifts add column if not exists refunds numeric not null default 0;
+    alter table sigma_shifts add column if not exists checks int not null default 0;
+    alter table sigma_shifts add column if not exists raw jsonb not null default '{}';
+
+    -- Расходы, которых нет в кассе: аренда, зарплата, коммуналка, налог. monthly — каждый месяц, сумма делится по дням.
+    create table if not exists expenses (
+      id bigserial primary key,
+      day date not null,
+      category text not null,
+      amount numeric not null check (amount > 0),
+      comment text not null default '',
+      monthly boolean not null default false,
+      until date,
+      created_by text not null default '',
+      created_at timestamptz not null default now()
+    );
+
     -- Меню приложения: карточка блюда (фото, описание, раздел, граммовка) и связь с позициями кассы.
     -- Цена всегда из кассы.
     create table if not exists menu_items (

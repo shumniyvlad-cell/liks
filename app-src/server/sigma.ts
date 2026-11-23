@@ -247,18 +247,48 @@ async function syncWaybills() {
   }
 }
 
-type Shift = {id: string; number: string; openTime: string | null; closeTime: string | null; total: number;
-  registerCash: number; cashPayments: {receiptsTotal: number}; cardPayments: {receiptsTotal: number}};
-const msk = (s: string | null) => (s ? new Date(s.replace(' ', 'T') + '+03:00') : null);
+type Pay = {receiptsTotal: number; receiptsNum: number; refundsTotal: number; refundsNum: number};
+type Shift = {id: string; number: string; openTime: string | null; closeTime: string | null; cashierName: string | null; total: number;
+  openAmount: number; cashInTotal: number; collectionsTotal: number; registerCash: number; cashPayments: Pay; cardPayments: Pay};
+// Время смен касса отдаёт в UTC без пояса: «2026-11-22 09:47:46.000» — это 12:47 по Москве.
+const utc = (s: string | null) => (s ? new Date(s.replace(' ', 'T') + 'Z') : null);
 async function syncShifts() {
-  const r = await api<{shifts: Shift[]}>(`rest/v3/sales/shifts?page=0&size=50`);
-  for (const s of r.shifts)
-    await sql`
-      insert into sigma_shifts (id, no, opened, closed, total, cash, card, drawer)
-      values (${s.id}, ${s.number}, ${msk(s.openTime)}, ${msk(s.closeTime)}, ${s.total ?? 0},
-        ${s.cashPayments?.receiptsTotal ?? 0}, ${s.cardPayments?.receiptsTotal ?? 0}, ${s.registerCash ?? 0})
-      on conflict (id) do update set closed = excluded.closed, total = excluded.total, cash = excluded.cash,
-        card = excluded.card, drawer = excluded.drawer`;
+  for (let page = 0; page < 40; page++) {
+    const r = await api<{shifts: Shift[]}>(`rest/v3/sales/shifts?page=${page}&size=50`);
+    for (const s of r.shifts) {
+      const c = s.cashPayments ?? ({} as Pay), k = s.cardPayments ?? ({} as Pay);
+      await sql`
+        insert into sigma_shifts (id, no, opened, closed, total, cash, card, drawer, cashier, open_amount, cash_in, collections, refunds, checks, raw)
+        values (${s.id}, ${s.number}, ${utc(s.openTime)}, ${utc(s.closeTime)}, ${s.total ?? 0},
+          ${c.receiptsTotal ?? 0}, ${k.receiptsTotal ?? 0}, ${s.registerCash ?? 0}, ${s.cashierName ?? ''}, ${s.openAmount ?? 0},
+          ${s.cashInTotal ?? 0}, ${s.collectionsTotal ?? 0}, ${(c.refundsTotal ?? 0) + (k.refundsTotal ?? 0)},
+          ${(c.receiptsNum ?? 0) + (k.receiptsNum ?? 0)}, ${sql.json(s as never)})
+        on conflict (id) do update set opened = excluded.opened, closed = excluded.closed, total = excluded.total, cash = excluded.cash,
+          card = excluded.card, drawer = excluded.drawer, cashier = excluded.cashier, open_amount = excluded.open_amount,
+          cash_in = excluded.cash_in, collections = excluded.collections, refunds = excluded.refunds, checks = excluded.checks, raw = excluded.raw`;
+    }
+    if (r.shifts.length < 50) break;
+  }
+}
+
+/* ── чек целиком: номер и цены строк ── */
+type Detail = {number?: string; totalDiscount?: number;
+  operationDetails?: {products?: {name: string; quantity: number; unitName: string; salePrice?: {value: number}; discount?: {value: number; type: string}; gift?: boolean}[]}};
+async function syncDetails() {
+  const ops = await sql<{id: string}[]>`select id from sigma_ops where full_at is null order by at desc limit 300`;
+  for (const o of ops) {
+    const d = await api<Detail>(`rest/v2/companies/${C}/payment-operations/sales/${o.id}`).catch(() => null);
+    if (!d) {
+      await sql`update sigma_ops set full_at = now() where id = ${o.id}`; // не отдаётся — не дёргаем снова
+      continue;
+    }
+    const lines = (d.operationDetails?.products ?? []).map((p) => {
+      const price = p.salePrice?.value ?? 0;
+      const disc = p.discount ? (p.discount.type === 'Absolute' ? p.discount.value : (price * p.quantity * p.discount.value) / 100) : 0;
+      return {name: p.name.replace(/\s+/g, ' ').trim(), qty: p.quantity, unit: p.unitName, price, discount: disc, gift: !!p.gift};
+    });
+    await sql`update sigma_ops set number = ${d.number ?? ''}, full_at = now()${lines.length ? sql`, lines = ${sql.json(lines)}` : sql``} where id = ${o.id}`;
+  }
 }
 
 /* ── запись: цена позиции меню ── */
@@ -275,11 +305,11 @@ export async function setPrice(menuProductId: string, price: number) {
 }
 
 /* ── синхронизация ── */
-export type SyncState = {at: number; ok: boolean; error?: string; full?: number};
+export type SyncState = {at: number; ok: boolean; error?: string; full?: number; running?: boolean};
 let state: SyncState = {at: 0, ok: false, error: 'Ещё не синхронизировали'};
 let running: Promise<SyncState> | null = null;
 let onChange: () => Promise<void> = async () => {};
-export const syncState = () => state;
+export const syncState = (): SyncState => ({...state, running: !!running});
 export function onMenuChange(f: () => Promise<void>) {
   onChange = f;
 }
@@ -293,6 +323,7 @@ export function sync(full = false): Promise<SyncState> {
       await syncItems();
       await syncOps();
       await syncShifts();
+      await syncDetails();
       if (full || Date.now() - (state.full ?? 0) > 3600e3) {
         await syncStock();
         await syncWaybills();

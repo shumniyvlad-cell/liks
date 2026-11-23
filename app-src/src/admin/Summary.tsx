@@ -1,5 +1,5 @@
 // Сводка: выручка и чеки из кассы, заказы приложения, деньги, прогноз месяца, советы.
-import {useCallback, useEffect, useState} from 'react';
+import {Fragment, useCallback, useEffect, useState} from 'react';
 import {VStack} from '@astryxdesign/core/VStack';
 import {HStack} from '@astryxdesign/core/HStack';
 import {Grid} from '@astryxdesign/core/Grid';
@@ -27,6 +27,9 @@ type Data = {
   supplies: {count: number; total: number};
   shift: {no: string; opened: string | null; closed: string | null; drawer: number; total: number} | null;
   foodcost: number | null;
+  profit: {revenue: number; cost: number; coverage: number; acquiring: number; acquiringPct: number | null;
+    expenses: {category: string; amount: number}[]; expensesTotal: number; net: number};
+  prevNet: number;
   advice: {tone: 'warn' | 'info' | 'good'; title: string; text: string}[];
   sync: Sync;
 };
@@ -114,7 +117,28 @@ function Body({d}: {d: Data}) {
         <Kpi label="Чеков" value={int(d.cur.checks)} note={d.cur.refunds ? `возвратов на ${rub(d.cur.refunds)}` : delta(d.cur.checks, d.prev.checks) || undefined} />
         <Kpi label="Средний чек" value={rub(avg)} note={delta(avg, prevAvg) || undefined} />
         <Kpi label="Заказы в приложении" value={int(d.app.orders)} note={d.app.orders ? `на ${rub(d.app.total)}, оплачено ${int(d.app.paid)}` : 'пока ни одного'} />
+        <Kpi label="Чистая прибыль" value={(d.profit.net < 0 ? '−' : '') + rub(Math.abs(d.profit.net))}
+          note={d.profit.expensesTotal || d.profit.cost ? delta(d.profit.net, d.prevNet) || undefined : 'внесите расходы, иначе это просто выручка'} />
       </Grid>
+
+      <Card padding={4}>
+        <VStack gap={3}>
+          <Heading level={2}>Откуда прибыль</Heading>
+          <dl className="adm-dl adm-dl--pnl">
+            <dt>Выручка</dt><dd>{rub(d.profit.revenue)}</dd>
+            <dt>Себестоимость продуктов</dt>
+            <dd>−{rub(d.profit.cost)}<small>{d.profit.coverage > 0.95 ? 'по техкартам и закупочным ценам' : d.profit.coverage > 0 ? `посчитана для ${Math.round(d.profit.coverage * 100)}% продаж` : 'не считается: в SIGMA нет закупочных цен'}</small></dd>
+            <dt>Эквайринг</dt>
+            <dd>−{rub(d.profit.acquiring)}<small>{d.profit.acquiringPct != null ? `${d.profit.acquiringPct}% от ${rub(d.cur.card)} по карте` : 'ставка не указана, раздел «Расходы»'}</small></dd>
+            {d.profit.expenses.map((e) => (
+              <Fragment key={e.category}><dt>{e.category}</dt><dd>−{rub(e.amount)}</dd></Fragment>
+            ))}
+            {!d.profit.expenses.length && (<><dt>Расходы</dt><dd>−{rub(0)}<small>не внесены, раздел «Расходы»</small></dd></>)}
+            <dt className="adm-dl__sum">Чистая прибыль</dt><dd className="adm-dl__sum">{(d.profit.net < 0 ? '−' : '') + rub(Math.abs(d.profit.net))}</dd>
+          </dl>
+          <Text size="sm" color="secondary">Ежемесячные расходы разложены по дням: за неделю в прибыль попадает четверть аренды. Налог по патенту внесите в расходы.</Text>
+        </VStack>
+      </Card>
 
       {empty && (
         <Card padding={5}>

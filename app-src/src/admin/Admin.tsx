@@ -17,10 +17,15 @@ import {adm, ago, AdminError, setOnLogout, type Sync} from './api';
 import Summary from './Summary';
 import MenuPage from './MenuPage';
 import StockPage from './StockPage';
+import {ChecksPage, ShiftsPage} from './Checks';
+import Expenses from './Expenses';
 
 type Me = {admin: {login: string; name: string}; sync: Sync; sigma: boolean};
 const PAGES = [
   {id: 'summary', label: 'Сводка'},
+  {id: 'shifts', label: 'Смены'},
+  {id: 'checks', label: 'Чеки'},
+  {id: 'expenses', label: 'Расходы'},
   {id: 'menu', label: 'Меню'},
   {id: 'stock', label: 'Склад и поставки'},
 ] as const;
@@ -155,13 +160,17 @@ function Shell({me, reload}: {me: Me; reload: () => void}) {
             <span className="display adm-title">{PAGES.find((p) => p.id === page)!.label}</span>
           </Heading>
           <HStack gap={3} align="center" wrap="wrap">
-            <StatusDot variant={sync.ok ? 'success' : 'error'} label={sync.ok ? `Касса: обновлено ${ago(sync.at)}` : `Касса: ${sync.error ?? 'нет связи'}`} />
+            <StatusDot variant={sync.ok ? 'success' : sync.running ? 'neutral' : 'error'}
+              label={sync.ok ? `Касса: обновлено ${ago(sync.at)}` : sync.running ? 'Касса: обновляется' : `Касса: ${sync.error ?? 'нет связи'}`} />
             <Button label="Обновить из кассы" size="sm" variant="secondary" isLoading={syncing} onClick={refresh} />
           </HStack>
         </HStack>
         {syncErr && <Banner status="error" title="Не обновилось" description={syncErr} />}
         {!me.sigma && <Banner status="warning" title="Касса не подключена" description="На сервере не заданы данные SIGMA. Цены и продажи берутся из последней копии." />}
         {page === 'summary' && <Summary key={stamp} />}
+        {page === 'shifts' && <ShiftsPage key={stamp} />}
+        {page === 'checks' && <ChecksPage key={stamp} />}
+        {page === 'expenses' && <Expenses key={stamp} />}
         {page === 'menu' && <MenuPage key={stamp} />}
         {page === 'stock' && <StockPage key={stamp} />}
       </main>

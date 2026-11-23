@@ -77,6 +77,65 @@ async function totalsFor(from: string, to: string): Promise<Totals> {
   return {revenue: num(r.pay) - num(r.refunds), refunds: num(r.refunds), checks: num(r.checks), cash: num(r.cash), card: num(r.card)};
 }
 
+
+/* ── прибыль: выручка − себестоимость по техкартам − эквайринг − расходы ── */
+export const EXPENSE_CATS = ['Аренда', 'Зарплата', 'Продукты и упаковка вне кассы', 'Коммуналка и связь', 'Налоги и патент', 'Реклама', 'Ремонт и техника', 'Прочее'];
+
+async function acquiringPct() {
+  const [r] = await sql<{value: string}[]>`select value from kv where key = 'acquiring_pct'`;
+  return r ? Number(r.value) : null;
+}
+
+const daysInMonth = (d: string) => new Date(Date.UTC(+d.slice(0, 4), +d.slice(5, 7), 0)).getUTCDate();
+
+async function expensesFor(from: string, to: string) {
+  const rows = await sql<{id: string; day: Date; category: string; amount: string; monthly: boolean; until: Date | null}[]>`
+    select id, day, category, amount, monthly, until from expenses
+    where (not monthly and day between ${from}::date and ${to}::date)
+       or (monthly and day <= ${to}::date and (until is null or until >= ${from}::date))`;
+  const byCat = new Map<string, number>();
+  for (const e of rows) {
+    let sum = Number(e.amount);
+    if (e.monthly) {
+      // Ежемесячный расход размазываем по дням: за неделю попадёт четверть аренды, за месяц — вся.
+      const start = [from, e.day.toISOString().slice(0, 10)].sort()[1];
+      const end = [to, e.until ? e.until.toISOString().slice(0, 10) : to].sort()[0];
+      sum = 0;
+      for (let d = start; d <= end; d = addDays(d, 1)) sum += Number(e.amount) / daysInMonth(d);
+    }
+    byCat.set(e.category, (byCat.get(e.category) ?? 0) + sum);
+  }
+  return [...byCat].map(([category, amount]) => ({category, amount})).sort((a, b) => b.amount - a.amount);
+}
+
+async function profitFor(from: string, to: string, t: Totals) {
+  const items = await sigmaItems();
+  const cost = new Map([...items.values()].filter((x) => x.unit === 'шт' && x.cost).map((x) => [x.name.toLowerCase(), x.cost!]));
+  const lines = await sql<{name: string; qty: string; price: string | null; discount: string | null; kind: string}[]>`
+    select l->>'name' as name, (l->>'qty') as qty, (l->>'price') as price, (l->>'discount') as discount, o.kind
+    from sigma_ops o, jsonb_array_elements(o.lines) l
+    where (o.at at time zone 'Europe/Moscow')::date between ${from}::date and ${to}::date`;
+  let cogs = 0, covered = 0, linesRevenue = 0;
+  for (const l of lines) {
+    const sign = l.kind === 'Payment' ? 1 : -1;
+    const rev = (num(l.price) * num(l.qty) - num(l.discount)) * sign;
+    linesRevenue += rev;
+    const c = cost.get(l.name.toLowerCase());
+    if (c) {
+      cogs += c * num(l.qty) * sign;
+      covered += rev;
+    }
+  }
+  const pct = await acquiringPct();
+  const acquiring = pct ? (t.card * pct) / 100 : 0;
+  const expenses = await expensesFor(from, to);
+  const exp = expenses.reduce((a, b) => a + b.amount, 0);
+  return {
+    revenue: t.revenue, cost: cogs, coverage: linesRevenue > 0 ? covered / linesRevenue : 0,
+    acquiring, acquiringPct: pct, expenses, expensesTotal: exp, net: t.revenue - cogs - acquiring - exp,
+  };
+}
+
 export function mountAdmin(app: Hono, h: {limit: Limit; ip: (c: Context) => string}) {
   const {limit, ip} = h;
 
@@ -142,6 +201,8 @@ export function mountAdmin(app: Hono, h: {limit: Limit; ip: (c: Context) => stri
 
     const cur = await totalsFor(from, to);
     const prev = await totalsFor(prevFrom, prevTo);
+    const profit = await profitFor(from, to, cur);
+    const prevProfit = await profitFor(prevFrom, prevTo, prev);
 
     const days = await sql<{d: string; revenue: string; checks: string}[]>`
       select to_char((at at time zone 'Europe/Moscow')::date, 'YYYY-MM-DD') as d,
@@ -219,6 +280,12 @@ export function mountAdmin(app: Hono, h: {limit: Limit; ip: (c: Context) => stri
     if (zero.length)
       advice.push({tone: 'info', title: 'Позиции без цены в кассе',
         text: `${zero.map((s) => `«${s.name}»`).join(', ')}: цена 0. В приложении такие блюда показываются с подписью «Цена скоро», заказать их нельзя.`});
+    if (profit.acquiringPct == null && cur.card > 0)
+      advice.push({tone: 'info', title: 'Укажите комиссию эквайринга',
+        text: 'Альфа-Банк берёт процент с каждой оплаты картой. Впишите ставку в разделе «Расходы», и она вычтется из прибыли.'});
+    if (!profit.expensesTotal)
+      advice.push({tone: 'info', title: 'Расходов пока нет',
+        text: 'Чтобы видеть чистую прибыль, внесите аренду, зарплату, коммуналку и патент в разделе «Расходы». Ежемесячные достаточно внести один раз.'});
     if (num(stock.negative))
       advice.push({tone: 'warn', title: 'Остатки ушли в минус',
         text: `У ${num(stock.negative)} товаров на складе остаток меньше нуля: продали больше, чем пришло. Проведите приход или инвентаризацию.`});
@@ -252,9 +319,98 @@ export function mountAdmin(app: Hono, h: {limit: Limit; ip: (c: Context) => stri
       supplies: {count: num(wb.n), total: num(wb.total)},
       shift: shift ? {no: shift.no, opened: shift.opened, closed: shift.closed, drawer: num(shift.drawer), total: num(shift.total)} : null,
       foodcost: costKnown && costRevenue ? costSum / costRevenue : null,
+      profit, prevNet: prevProfit.net,
       advice,
       sync: syncState(),
     });
+  });
+
+
+  /* ── смены ── */
+  app.get('/admin/shifts', async (c) => {
+    await needAdmin(c);
+    const today = mskToday();
+    const from = DAY.test(c.req.query('from') ?? '') ? c.req.query('from')! : addDays(today, -30);
+    const to = DAY.test(c.req.query('to') ?? '') ? c.req.query('to')! : today;
+    const rows = await sql`
+      select s.id, s.no, s.opened, s.closed, s.cashier, s.open_amount::float as "openAmount", s.cash::float as cash, s.card::float as card,
+        s.refunds::float as refunds, s.cash_in::float as "cashIn", s.collections::float as collections, s.drawer::float as drawer,
+        s.total::float as total, s.checks,
+        (select count(*) from sigma_ops o where o.kind = 'Payment' and o.at >= s.opened and (s.closed is null or o.at <= s.closed))::int as "opsChecks"
+      from sigma_shifts s
+      where (s.opened at time zone 'Europe/Moscow')::date <= ${to}::date
+        and (s.closed is null or (s.closed at time zone 'Europe/Moscow')::date >= ${from}::date)
+      order by s.opened desc nulls last`;
+    return c.json({from, to, shifts: rows});
+  });
+
+  /* ── чеки ── */
+  app.get('/admin/checks', async (c) => {
+    await needAdmin(c);
+    const today = mskToday();
+    const from = DAY.test(c.req.query('from') ?? '') ? c.req.query('from')! : today;
+    const to = DAY.test(c.req.query('to') ?? '') ? c.req.query('to')! : today;
+    const shift = c.req.query('shift') ?? '';
+    const method = c.req.query('method') ?? '';
+    const q = (c.req.query('q') ?? '').trim().toLowerCase().slice(0, 60);
+    let opened: Date | null = null, closed: Date | null = null;
+    if (shift) {
+      const [s] = await sql<{opened: Date; closed: Date | null}[]>`select opened, closed from sigma_shifts where id = ${shift}`;
+      if (!s) throw new Bad('Нет такой смены.', 404);
+      opened = s.opened;
+      closed = s.closed;
+    }
+    const rows = await sql`
+      select id, at, number, method, kind, sum::float as sum, discount::float as discount, cashier, lines
+      from sigma_ops
+      where ${shift ? sql`at >= ${opened} and (${closed}::timestamptz is null or at <= ${closed})` : sql`(at at time zone 'Europe/Moscow')::date between ${from}::date and ${to}::date`}
+        ${method === 'cash' ? sql`and method = 'Cash'` : method === 'card' ? sql`and method <> 'Cash'` : sql``}
+        ${q ? sql`and exists (select 1 from jsonb_array_elements(lines) l where lower(l->>'name') like ${'%' + q + '%'})` : sql``}
+      order by at desc limit 1000`;
+    return c.json({from, to, checks: rows});
+  });
+
+  /* ── расходы и комиссия ── */
+  app.get('/admin/expenses', async (c) => {
+    await needAdmin(c);
+    const rows = await sql`select id, to_char(day, 'YYYY-MM-DD') as day, category, amount::float as amount, comment, monthly,
+      to_char(until, 'YYYY-MM-DD') as until, created_by as "createdBy" from expenses order by monthly desc, day desc, id desc limit 500`;
+    return c.json({expenses: rows, cats: EXPENSE_CATS, acquiringPct: await acquiringPct()});
+  });
+  app.post('/admin/expenses', async (c) => {
+    const a = await needAdmin(c);
+    const b = await c.req.json<{day?: string; category?: string; amount?: number; comment?: string; monthly?: boolean}>();
+    const day = String(b.day ?? '');
+    if (!DAY.test(day) || Number.isNaN(Date.parse(day))) throw new Bad('Выберите дату.', 400, 'day');
+    if (!EXPENSE_CATS.includes(String(b.category))) throw new Bad('Выберите статью.', 400, 'category');
+    const amount = Number(b.amount);
+    if (!(amount > 0) || amount > 10_000_000) throw new Bad('Сумма больше нуля.', 400, 'amount');
+    await sql`insert into expenses (day, category, amount, comment, monthly, created_by)
+      values (${day}, ${String(b.category)}, ${Math.round(amount * 100) / 100}, ${String(b.comment ?? '').trim().slice(0, 200)}, ${b.monthly === true}, ${a.login})`;
+    return c.json({ok: true});
+  });
+  // Ежемесячный расход не удаляем задним числом: закрываем вчерашним днём, прошлые месяцы остаются в прибыли.
+  app.delete('/admin/expenses/:id', async (c) => {
+    await needAdmin(c);
+    const id = c.req.param('id');
+    if (!/^\d+$/.test(id)) throw new Bad('Нет такого расхода.', 404);
+    const [e] = await sql<{monthly: boolean; day: Date}[]>`select monthly, day from expenses where id = ${id}`;
+    if (!e) throw new Bad('Нет такого расхода.', 404);
+    const yesterday = addDays(mskToday(), -1);
+    if (e.monthly && e.day.toISOString().slice(0, 10) <= yesterday) await sql`update expenses set until = ${yesterday} where id = ${id}`;
+    else await sql`delete from expenses where id = ${id}`;
+    return c.json({ok: true});
+  });
+  app.patch('/admin/settings', async (c) => {
+    await needAdmin(c);
+    const b = await c.req.json<{acquiringPct?: number | null}>();
+    if (b.acquiringPct === null) await sql`delete from kv where key = 'acquiring_pct'`;
+    else {
+      const v = Number(b.acquiringPct);
+      if (!(v >= 0 && v <= 10)) throw new Bad('Ставка от 0 до 10%.', 400, 'acquiringPct');
+      await sql`insert into kv (key, value) values ('acquiring_pct', ${String(v)}) on conflict (key) do update set value = excluded.value, updated_at = now()`;
+    }
+    return c.json({acquiringPct: await acquiringPct()});
   });
 
   /* ── склад и поставки ── */
