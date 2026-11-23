@@ -1,0 +1,59 @@
+/* Админка Ликса: каркас Astryx, цвета айдентики. Цифры — заголовочным шрифтом бренда. */
+
+.adm-login { min-height: 100dvh; display: grid; place-items: center; padding: var(--spacing-4); background: var(--color-background-body); }
+.adm-title { font-size: clamp(1.8rem, 4vw, 2.6rem); color: var(--brand); }
+.adm-main { display: flex; flex-direction: column; gap: var(--spacing-5); padding: var(--spacing-5) var(--spacing-4) var(--spacing-10); max-width: 1180px; width: 100%; margin-inline: auto; }
+@media (min-width: 900px) { .adm-main { padding-inline: var(--spacing-8); } }
+
+.adm-kpi { font-family: var(--display); font-weight: 900; font-size: clamp(1.9rem, 3.4vw, 2.5rem); line-height: 1; color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
+
+.adm-dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--spacing-2) var(--spacing-4); margin: 0; }
+.adm-dl dt { color: var(--color-text-secondary); }
+.adm-dl dd { margin: 0; text-align: end; font-weight: 600; font-variant-numeric: tabular-nums; }
+.adm-dl dd small { display: block; font-weight: 400; font-size: .82rem; color: var(--color-text-secondary); max-width: 22ch; margin-inline-start: auto; }
+
+.adm-advice { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--spacing-3); }
+.adm-advice li { display: grid; gap: var(--spacing-1); padding-inline-start: var(--spacing-3); border-inline-start: 3px solid var(--sage); }
+.adm-advice li[data-tone='warn'] { border-color: var(--berry); }
+.adm-advice li[data-tone='good'] { border-color: var(--forest); }
+.adm-advice span { color: var(--color-text-secondary); max-width: 75ch; }
+
+/* график: одна серия цветом бренда, сетки нет, база тонкая */
+.adm-chart { position: relative; margin: 0; width: 100%; }
+.adm-chart__svg { display: block; width: 100%; height: auto; overflow: visible; }
+.adm-chart__bar { fill: color-mix(in oklab, var(--brand) 78%, transparent); transition: fill .12s; }
+.adm-chart__bar.is-on { fill: var(--brand); }
+.adm-chart__hit { fill: transparent; outline: none; }
+.adm-chart__hit:focus-visible { fill: color-mix(in oklab, var(--brand) 10%, transparent); }
+.adm-chart__base { stroke: var(--line); stroke-width: 1; }
+.adm-chart__tick { fill: var(--color-text-secondary); font-size: 11px; font-variant-numeric: tabular-nums; }
+.adm-chart__tip {
+  position: absolute; top: 0; transform: translate(-50%, -100%); pointer-events: none; white-space: nowrap;
+  background: var(--color-background-surface); color: var(--color-text-primary); border-radius: var(--radius-2);
+  box-shadow: 0 6px 20px -8px color-mix(in oklab, black 35%, transparent), 0 0 0 1px var(--line);
+  padding: var(--spacing-1) var(--spacing-2); display: grid; font-size: .85rem;
+}
+.adm-chart__tip span { color: var(--color-text-secondary); }
+
+/* строки меню */
+.adm-rows { list-style: none; margin: 0; padding: 0; }
+.adm-rows > li + li { border-top: 1px solid var(--line); }
+.adm-row {
+  width: 100%; display: grid; grid-template-columns: 56px minmax(0, 1fr) auto auto; align-items: center; gap: var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-3); background: none; border: 0; color: inherit; font: inherit; text-align: start; cursor: pointer;
+}
+.adm-row:hover { background: color-mix(in oklab, var(--color-text-primary) 4%, transparent); }
+.adm-row:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.adm-row img, .adm-row__nophoto { width: 56px; height: 70px; object-fit: cover; border-radius: var(--radius-2); background: var(--photo-bg); display: block; }
+.adm-row__t { display: grid; min-width: 0; }
+.adm-row__t small { color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-row__p { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.adm-free { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--spacing-3); padding: var(--spacing-2) var(--spacing-3); }
+@media (max-width: 560px) {
+  .adm-row { grid-template-columns: 56px minmax(0, 1fr) auto; }
+  .adm-row .astryx-badge, .adm-row > :last-child { grid-column: 2 / -1; justify-self: start; }
+  .adm-free { grid-template-columns: minmax(0, 1fr) auto; }
+  .adm-free .adm-row__t { grid-column: 1 / -1; }
+}
+.adm-photo { width: 120px; height: 150px; object-fit: cover; border-radius: var(--radius-3); background: var(--photo-bg); display: block; flex: none; }
+.adm-neg { color: var(--berry-text); font-weight: 600; }

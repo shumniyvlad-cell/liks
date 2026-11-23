@@ -77,6 +77,16 @@ EOF
   sudo -u postgres psql -qtAc "select 1 from pg_database where datname='liks'" | grep -q 1 || sudo -u postgres createdb -O liks liks
 fi
 
+log "Касса SIGMA: ключи в окружении (значения вписываются руками, см. deploy/sigma-relay.mjs)"
+grep -q '^SIGMA_COMPANY=' $ENV || cat >> $ENV <<'EOF'
+# Касса SIGMA (облако АТОЛ): компания, меню, точка продаж и ключ приложения их кабинета.
+SIGMA_COMPANY=
+SIGMA_MENU=
+SIGMA_SELLPOINT=
+SIGMA_BASIC=
+MEDIA_DIR=/var/lib/liks/media
+EOF
+
 log "Юнит API"
 cat > /etc/systemd/system/liks-api.service <<'EOF'
 [Unit]
@@ -98,6 +108,9 @@ ProtectSystem=strict
 ProtectHome=true
 PrivateTmp=true
 ReadOnlyPaths=/opt/liks
+# Фото блюд из админки: /var/lib/liks/media, Caddy отдаёт их по /media/.
+StateDirectory=liks
+StateDirectoryMode=0755
 
 [Install]
 WantedBy=multi-user.target
@@ -118,6 +131,20 @@ ${DOMAIN} {
 	}
 	handle /api/* {
 		reverse_proxy 127.0.0.1:8787
+	}
+	handle /media/* {
+		root * /var/lib/liks
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+	# Админка: одна страница по /admin, ассеты у неё относительные — без слеша на конце.
+	redir /admin/ /admin
+	handle /admin {
+		root * /opt/liks/www
+		header X-Robots-Tag "noindex, nofollow"
+		header Cache-Control "no-cache"
+		rewrite * /admin.html
+		file_server
 	}
 	handle {
 		root * /opt/liks/www

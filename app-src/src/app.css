@@ -373,3 +373,6 @@ h1, h2 { letter-spacing: 0; line-height: .95; }
   .dock__item:hover:not([aria-current='page']) { color: var(--color-text-primary); }
 }
 :root[data-motion='off'] .tile:hover { transform: none; }
+
+/* ссылка внутри текста: тот же размер и цвет, подчёркнута */
+.inline-link { color: inherit; text-decoration: underline; text-underline-offset: 3px; }

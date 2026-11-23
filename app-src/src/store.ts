@@ -190,7 +190,7 @@ export async function requestCode(phone: string) {
 
 export async function signIn(phone: string, name: string, code: string) {
   if (online) {
-    const r = await api<{user: User}>('/auth/verify', {phone, name, code});
+    const r = await api<{user: User}>('/auth/verify', {phone, name, code, consent: true}); // согласие отмечено на шаге номера
     set({user: r.user});
     return;
   }

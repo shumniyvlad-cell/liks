@@ -28,8 +28,8 @@ if [[ ${1:-} == --setup ]]; then
 fi
 
 echo "== Файлы"
-rsync -az --delete -e "${SSH[*]}" dist-server-app/ "$HOST:/opt/liks/www/"
-rsync -az -e "${SSH[*]}" server-dist/main.js server-dist/package.json "$HOST:/opt/liks/api/"
+rsync -az --delete --chmod=D755,F644 -e "${SSH[*]}" dist-server-app/ "$HOST:/opt/liks/www/"
+rsync -az --chmod=D755,F644 -e "${SSH[*]}" server-dist/main.js server-dist/package.json "$HOST:/opt/liks/api/"
 
 echo "== Пакеты и перезапуск"
 "${SSH[@]}" "$HOST" 'set -e

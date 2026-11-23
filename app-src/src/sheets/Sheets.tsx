@@ -14,6 +14,7 @@ import {TextInput} from '@astryxdesign/core/TextInput';
 import {TextArea} from '@astryxdesign/core/TextArea';
 import {DateInput} from '@astryxdesign/core/DateInput';
 import {EmptyState} from '@astryxdesign/core/EmptyState';
+import {CheckboxInput} from '@astryxdesign/core/CheckboxInput';
 import {Art} from '../ui/brand';
 import {artColor} from '../ui/parts';
 import {byId, cafe, img, MODES, PROMOS, SUB, type Item, type ModeId, type Opt, type OptKey} from '../business';
@@ -114,6 +115,7 @@ function DishSheet({id}: {id: string}) {
       <VStack gap={1}>
         <Heading level={2}>{T(m.name)}</Heading>
         <Text color="secondary">{T(m.desc)}</Text>
+        {m.weight && <Text color="secondary" size="sm">{T(m.weight)}</Text>}
       </VStack>
       {GROUPS.map(([k, label]) => {
         const items = m.opts?.[k];
@@ -399,11 +401,18 @@ function AuthSheet({then}: {then: Sheet | null}) {
   const [phone, setPhone] = useState('+7 ');
   const [name, setName] = useState('');
   const [bad, setBad] = useState<string | false>(false);
+  const [agree, setAgree] = useState(false);
+  const [noAgree, setNoAgree] = useState(false);
   const [busy, setBusy] = useState(false);
   const send = () => {
     if (busy) return;
     if (phone.replace(/\D/g, '').length !== 11) {
       setBad('Номер из 10 цифр после +7.');
+      vibrate([10, 40, 10]);
+      return;
+    }
+    if (!agree) {
+      setNoAgree(true);
       vibrate([10, 40, 10]);
       return;
     }
@@ -423,7 +432,14 @@ function AuthSheet({then}: {then: Sheet | null}) {
         status={bad ? {type: 'error', message: bad} : undefined}
         onChange={(v) => (setBad(false), setPhone(mask(v)))} />
       <TextInput label="Как к вам обращаться" autoComplete="given-name" isOptional value={name} onChange={setName} onEnter={send} />
-      <Text color="secondary" size="sm">{T('Нажимая кнопку, вы соглашаетесь получать СМС о заказах.')}</Text>
+      <CheckboxInput label="Согласен на обработку персональных данных" value={agree}
+        status={noAgree ? {type: 'error', message: 'Без согласия войти нельзя: номер — это персональные данные.'} : undefined}
+        onChange={(v) => (setAgree(v), setNoAgree(false))} />
+      <Text color="secondary" size="sm">
+        {T('Что храним и зачем — в ')}
+        <a className="inline-link" href={`${import.meta.env.BASE_URL}privacy.html`} target="_blank" rel="noopener">{T('политике обработки персональных данных')}</a>
+        {T('. Нажимая кнопку, вы соглашаетесь получать СМС о заказах.')}
+      </Text>
       <Foot>
         <Button label="Получить код" variant="primary" size="lg" width="100%" isLoading={busy} onClick={send} />
       </Foot>

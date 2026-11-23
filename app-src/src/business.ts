@@ -2,7 +2,8 @@ import type {ArtName} from './ui/brand';
 // Всё про кофейню живёт здесь: адрес, часы, меню, акции.
 // Цвет акцента — в теме: npx astryx experimental theme editor set liks accent "#hex".
 
-export const img = (k: string) => `${import.meta.env.BASE_URL}img/${k}.jpg`;
+// Фото из кода — ключ файла в public/img; загруженное в админке — путь /media/….
+export const img = (k: string) => (k.startsWith('/') ? k : `${import.meta.env.BASE_URL}img/${k}.jpg`);
 
 export const cafe = {
   name: 'Ликс',
@@ -27,6 +28,8 @@ export type Item = {
   desc: string;
   photo: string;
   price: number;
+  /** Выход или объём, как пишет кофейня: «250 г», «300 мл». */
+  weight?: string;
   old?: number;
   tag?: string;
   coffee?: boolean;
@@ -103,6 +106,11 @@ export const SUB: Item = {
   id: 'sub20', cat: 'sub', name: 'Абонемент «20 капучино»', desc: '20 капучино S в течение 60 дней.',
   price: 3900, photo: 'cappuccino', noDiscount: true,
 };
+
+/** Меню с сервера (цены кассы) — подменяет то, что в коде, до первого показа. */
+export function setMenu(items: Item[]) {
+  MENU.splice(0, MENU.length, ...items);
+}
 
 export const byId = (id: string) => (id === SUB.id ? SUB : MENU.find((m) => m.id === id))!;
 /** Есть ли позиция в нынешнем меню: в старых корзинах и заказах могут быть снятые блюда. */

@@ -1,33 +1,18 @@
-import {StrictMode} from 'react';
-import {createRoot} from 'react-dom/client';
-import '@astryxdesign/core/reset.css';
-import '@astryxdesign/core/astryx.css';
-import './app.css';
-import {Theme} from '@astryxdesign/core/theme';
-import {LayerProvider} from '@astryxdesign/core/Layer';
-import {InternationalizationProvider} from '@astryxdesign/core/i18n';
-import ruRU from '@astryxdesign/core/locales/ru-RU.generated.js';
-import {themes, defaultThemeSlug} from './astryx-themes';
-import {useStore} from './store';
-import './ui/motion';
-import App from './App';
+// Вход приложения. С сервером сначала берём меню с ценами кассы и только потом грузим экраны:
+// корзина и карточки сразу видят настоящие цены. Нет ответа за 4 секунды — показываем меню из кода.
+import {online} from './api';
+import {setMenu, type Item} from './business';
 
-// Тема: 'system' — как в телефоне; гость меняет её в профиле.
-function Root() {
-  const {theme} = useStore();
-  return (
-    <Theme theme={themes[defaultThemeSlug]} mode={theme}>
-      <LayerProvider>
-        <App />
-      </LayerProvider>
-    </Theme>
-  );
+async function boot() {
+  if (online) {
+    try {
+      const r = await fetch(`${import.meta.env.BASE_URL}api/menu`, {signal: AbortSignal.timeout(4000)});
+      const j = (await r.json()) as {items: Item[] | null};
+      if (r.ok && j.items?.length) setMenu(j.items);
+    } catch {
+      // меню из кода
+    }
+  }
+  await import('./root');
 }
-
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <InternationalizationProvider locale="ru-RU" messages={{'ru-RU': ruRU}}>
-      <Root />
-    </InternationalizationProvider>
-  </StrictMode>,
-);
+void boot();

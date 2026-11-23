@@ -13,6 +13,12 @@ import type postgres from 'postgres';
 import {migrate, sql} from './db';
 import {sendSms} from './sms';
 import {Bad} from './bad';
+import {addAdmin, mountAdmin} from './admin';
+import {liveMenu, rebuildMenu, seedMenu} from './menu';
+import {onMenuChange, saveAtolToken, saveOfflineToken, sync} from './sigma';
+
+// Редакция политики обработки ПДн (public/privacy.html). Поменяли текст — поднять, согласие спросим заново.
+const POLICY_VER = '2026-11-23';
 
 const env = process.env;
 const SECRET = env.SECRET ?? '';
@@ -141,11 +147,16 @@ function readLine(raw: unknown): Line {
 
 /* ── приложение ── */
 const app = new Hono().basePath('/api');
-app.use('*', bodyLimit({maxSize: 32 * 1024}));
-// Запросы, меняющие данные, — только JSON и только со своего адреса.
+// Фото блюда из админки — до 3 МБ JPEG, всё остальное — JSON до 32 КБ.
+const isPhoto = (path: string) => /^\/api\/admin\/menu\/[^/]+\/photo$/.test(path);
+const smallBody = bodyLimit({maxSize: 32 * 1024});
+const photoBody = bodyLimit({maxSize: 3 * 1024 * 1024});
+app.use('*', (c, next) => (isPhoto(c.req.path) ? photoBody : smallBody)(c, next));
+// Запросы, меняющие данные, — только JSON (фото — JPEG) и только со своего адреса.
 app.use('*', async (c, next) => {
   if (c.req.method !== 'GET') {
-    if (!(c.req.header('content-type') ?? '').startsWith('application/json')) throw new Bad('Ожидаем JSON.', 415);
+    const type = c.req.header('content-type') ?? '';
+    if (!(isPhoto(c.req.path) ? type === 'image/jpeg' : type.startsWith('application/json'))) throw new Bad('Ожидаем JSON.', 415);
     const origin = c.req.header('origin');
     if (origin && new URL(origin).host !== c.req.header('host')) throw new Bad('Чужой адрес.', 403);
   }
@@ -162,6 +173,9 @@ app.get('/health', async (c) => {
   await sql`select 1`;
   return c.json({ok: true});
 });
+
+// Меню для приложения: карточки из админки с ценами кассы. Пусто — касса ещё не выгружалась, приложение берёт меню из кода.
+app.get('/menu', (c) => c.json({items: liveMenu().length ? liveMenu() : null}));
 
 app.post('/auth/code', async (c) => {
   const {phone: raw} = await c.req.json<{phone?: string}>();
@@ -181,8 +195,9 @@ app.post('/auth/code', async (c) => {
 });
 
 app.post('/auth/verify', async (c) => {
-  const b = await c.req.json<{phone?: string; code?: string; name?: string}>();
+  const b = await c.req.json<{phone?: string; code?: string; name?: string; consent?: boolean}>();
   const phone = normPhone(b.phone);
+  if (b.consent !== true) throw new Bad('Без согласия на обработку персональных данных войти нельзя.', 400, 'consent');
   const code = String(b.code ?? '');
   if (!/^\d{4}$/.test(code)) throw new Bad('Код из четырёх цифр.');
   if (AUTH_TEST && !TEST_PHONES.has(phone)) throw new Bad('Вход пока открыт только для тестовых номеров.', 403);
@@ -200,8 +215,9 @@ app.post('/auth/verify', async (c) => {
   if (!used.count) throw new Bad('Код уже использован. Запросите новый.');
   const name = str(b.name, 30);
   const [u] = await sql<{id: string}[]>`
-    insert into users (phone, name, card) values (${phone}, ${name}, ${newCard()})
-    on conflict (phone) do update set name = case when users.name = '' then excluded.name else users.name end
+    insert into users (phone, name, card, consent_at, consent_ver) values (${phone}, ${name}, ${newCard()}, now(), ${POLICY_VER})
+    on conflict (phone) do update set name = case when users.name = '' then excluded.name else users.name end,
+      consent_at = now(), consent_ver = ${POLICY_VER}
     returning id`;
   const token = randomBytes(32).toString('base64url');
   await sql`insert into sessions (token_hash, user_id, expires_at) values (${hash(token)}, ${u.id}, now() + make_interval(days => ${SESSION_DAYS}))`;
@@ -329,7 +345,45 @@ app.post('/staff/orders/:id', async (c) => {
   return c.json({ok: true});
 });
 
+mountAdmin(app, {limit, ip});
+
 await migrate();
+
+// Служебные команды: node main.js add-admin <логин> [имя] — печатает новый пароль один раз;
+// node main.js sigma-token < файл — сохранить офлайн-токен SIGMA (зашифрованным) в базу.
+const cmd = process.argv[2];
+if (cmd === 'add-admin') {
+  const login = String(process.argv[3] ?? '');
+  if (!/^[a-z0-9._-]{3,40}$/i.test(login)) throw new Error('логин: латиница, цифры, 3–40 символов');
+  console.log(await addAdmin(login, process.argv.slice(4).join(' ')));
+  process.exit(0);
+}
+if (cmd === 'sigma-token') {
+  const chunks: Buffer[] = [];
+  for await (const ch of process.stdin) chunks.push(ch as Buffer);
+  const t = Buffer.concat(chunks).toString('utf8').trim();
+  if (t.split('.').length !== 3) throw new Error('это не токен');
+  await saveOfflineToken(t);
+  console.log('ok');
+  process.exit(0);
+}
+// node main.js sigma-atol < {"access_token":…,"expires_in":…} — токен ATOL от рабочего сервера.
+if (cmd === 'sigma-atol') {
+  const chunks: Buffer[] = [];
+  for await (const ch of process.stdin) chunks.push(ch as Buffer);
+  const j = JSON.parse(Buffer.concat(chunks).toString('utf8')) as {access_token?: string; expires_in?: number};
+  if (!j.access_token || !(Number(j.expires_in) > 0)) throw new Error('нет токена');
+  await saveAtolToken(j.access_token, Number(j.expires_in));
+  console.log('ok');
+  process.exit(0);
+}
+
+await seedMenu();
+await rebuildMenu();
+onMenuChange(rebuildMenu);
+// Касса: сразу при запуске и каждые 5 минут; склад, приходы и техкарты — раз в час.
+void sync(true);
+setInterval(() => void sync(), 300e3).unref();
 // Старые сессии и коды подчищаем раз в час.
 setInterval(() => {
   sql`delete from sessions where expires_at < now()`.catch(() => {});

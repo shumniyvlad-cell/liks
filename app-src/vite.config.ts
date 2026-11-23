@@ -5,7 +5,7 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   // Относительные пути: сайт живёт в /liks/. Сборка в dist, на бой копирует npm run publish.
   base: './',
-  build: {outDir: 'dist', emptyOutDir: true},
+  build: {outDir: 'dist', emptyOutDir: true, rollupOptions: {input: {main: 'index.html', admin: 'admin.html'}}},
   plugins: [react()],
   // npm run dev с VITE_BACKEND=server ходит в локальный сервер (npm run dev:api) на :8787.
   server: {proxy: {'/api': {target: 'http://127.0.0.1:8787', changeOrigin: false}}},
@@ -17,6 +17,14 @@ export default defineConfig({
     include: [
       '@astryxdesign/core/AlertDialog',
       '@astryxdesign/core/AspectRatio',
+      '@astryxdesign/core/Table',
+      '@astryxdesign/core/Selector',
+      '@astryxdesign/core/NumberInput',
+      '@astryxdesign/core/FileInput',
+      '@astryxdesign/core/Drawer',
+      '@astryxdesign/core/Dialog',
+      '@astryxdesign/core/SideNav',
+      '@astryxdesign/core/AppShell',
       '@astryxdesign/core/Avatar',
       '@astryxdesign/core/Badge',
       '@astryxdesign/core/Banner',
@@ -24,6 +32,7 @@ export default defineConfig({
       '@astryxdesign/core/Button',
       '@astryxdesign/core/Card',
       '@astryxdesign/core/Carousel',
+      '@astryxdesign/core/CheckboxInput',
       '@astryxdesign/core/Divider',
       '@astryxdesign/core/TextArea',
       '@astryxdesign/core/DateInput',
