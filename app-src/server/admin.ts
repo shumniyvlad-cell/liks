@@ -264,7 +264,7 @@ export function mountAdmin(app: Hono, h: {limit: Limit; ip: (c: Context) => stri
       from sigma_stock`;
     const [wb] = await sql`
       select count(*) as n, coalesce(sum(sum), 0) as total from sigma_waybills
-      where at is null or (at at time zone 'Europe/Moscow')::date between ${from}::date and ${to}::date`;
+      where data->>'type' = 'INCOME' and status = 'SAVED' and (at at time zone 'Europe/Moscow')::date between ${from}::date and ${to}::date`;
     const [shift] = await sql`select no, opened, closed, drawer, total from sigma_shifts order by opened desc nulls last limit 1`;
 
     /* ── советы: только по фактам из кассы ── */
@@ -418,7 +418,9 @@ export function mountAdmin(app: Hono, h: {limit: Limit; ip: (c: Context) => stri
     await needAdmin(c);
     const stock = await sql`select id, name, unit, remainder::float as remainder, buy_price::float as "buyPrice",
       (greatest(remainder, 0) * buy_price)::float as value from sigma_stock order by name`;
-    const waybills = await sql`select id, at, sum::float as sum, supplier, status from sigma_waybills order by at desc nulls last limit 100`;
+    const waybills = await sql`select id, at, sum::float as sum, supplier,
+      case when data->>'type' = 'WITHDRAW' then 'Списание' else 'Приход' end || case when status = 'SAVED' then '' else ', черновик' end as status
+      from sigma_waybills order by at desc nulls last limit 100`;
     return c.json({stock, waybills, sync: syncState()});
   });
 

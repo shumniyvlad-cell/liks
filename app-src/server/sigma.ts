@@ -225,25 +225,23 @@ async function syncStock() {
 }
 
 type Waybill = Record<string, unknown> & {id: string};
-const pick = (o: Record<string, unknown>, keys: string[]) => {
-  for (const k of keys) if (o[k] != null) return o[k];
-  return null;
-};
+// Приходы и списания: список кассы без суммы, сумму по закупке берём отдельным запросом. Время — московское без пояса.
 async function syncWaybills() {
-  for (let page = 0; page < 20; page++) {
-    const r = await api<{waybills: Waybill[]}>(`waybills/find?page=${page}&size=50`, {method: 'POST', body: {}});
-    for (const w of r.waybills) {
-      const sup = pick(w, ['supplier', 'supplierName']);
-      const at = pick(w, ['date', 'documentDate', 'createdDate', 'creationDate']);
-      await sql`
-        insert into sigma_waybills (id, at, sum, supplier, status, data)
-        values (${w.id}, ${at ? new Date(String(at)) : null},
-          ${Number(pick(w, ['purchasePriceAmount', 'totalAmount', 'amount', 'sum']) ?? 0) || 0},
-          ${typeof sup === 'object' && sup ? String((sup as {name?: string}).name ?? '') : String(sup ?? '')},
-          ${String(pick(w, ['status']) ?? '')}, ${sql.json(w as never)})
-        on conflict (id) do update set at = excluded.at, sum = excluded.sum, supplier = excluded.supplier, status = excluded.status, data = excluded.data`;
+  const msk = (t: string | null) => (t ? new Date(t.replace(' ', 'T') + '+03:00') : null);
+  for (const type of ['INCOME', 'WITHDRAW']) {
+    for (let page = 0; page < 20; page++) {
+      const r = await api<{waybills: Waybill[]}>(`waybills/find?page=${page}&size=50`, {method: 'POST',
+        body: {waybillType: type, begin: '2026-01-01 00:00:00.000', end: '2030-12-31 23:59:59.999'}});
+      for (const w of r.waybills) {
+        const sup = (w.supplier as {name?: string} | null)?.name ?? '';
+        const sum = w.status === 'SAVED' ? Number(await api<number>(`waybills/${w.id}/buying-amount`).catch(() => 0)) || 0 : 0;
+        await sql`
+          insert into sigma_waybills (id, at, sum, supplier, status, data)
+          values (${w.id}, ${msk(String(w.waybillTime ?? '') || null)}, ${sum}, ${String(sup || w.comment || '')}, ${String(w.status ?? '')}, ${sql.json({...w, type} as never)})
+          on conflict (id) do update set at = excluded.at, sum = excluded.sum, supplier = excluded.supplier, status = excluded.status, data = excluded.data`;
+      }
+      if (r.waybills.length < 50) break;
     }
-    if (r.waybills.length < 50) break;
   }
 }
 

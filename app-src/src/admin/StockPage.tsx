@@ -35,14 +35,14 @@ export default function StockPage() {
     <VStack gap={5}>
       <Card padding={4}>
         <VStack gap={3}>
-          <Heading level={2}>Поставки</Heading>
+          <Heading level={2}>Приходы и списания</Heading>
           {d.waybills.length ? (
             <Table density="compact" idKey="id"
               data={d.waybills.map((w) => ({id: w.id, at: w.at ? new Date(w.at).toLocaleDateString('ru-RU') : '—', supplier: w.supplier || '—', status: w.status || '—', sum: rub(w.sum)}))}
               columns={[
                 {key: 'at', header: 'Дата', width: pixel(110)},
-                {key: 'supplier', header: 'Поставщик'},
-                {key: 'status', header: 'Статус', width: pixel(120)},
+                {key: 'supplier', header: 'Поставщик или комментарий'},
+                {key: 'status', header: 'Документ', width: pixel(160)},
                 {key: 'sum', header: 'Сумма', align: 'end', width: pixel(120)},
               ]} />
           ) : (
