@@ -110,7 +110,12 @@ async function call<T>(base: string, path: string, init: {method?: string; body?
     }
     const text = await r.text();
     if (!r.ok) throw new SigmaError(`SIGMA ответила ${r.status} на ${path.split('?')[0].replace(C, '{C}')}`);
-    return (text ? JSON.parse(text) : null) as T;
+    if (!text) return null as T;
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      return text as T; // номер документа касса отдаёт голым текстом: «00006»
+    }
   }
   throw new SigmaError('SIGMA не пускает.');
 }
@@ -302,6 +307,75 @@ export async function setPrice(menuProductId: string, price: number) {
   await sql`update sigma_items set price = ${price} where id = ${menuProductId}`;
 }
 
+/* ── списания: блюдо раскладываем на состав ──
+   Документ «Списание» в SIGMA снимает само блюдо (остаток 0 → −1), а состав не трогает.
+   Под каждое проведённое списание проводим «Производство» на списанное сверх остатка: касса раскладывает
+   блюдо по техкарте, полуфабрикат берёт со склада, а при нехватке списывает его сырьё. Блюдо возвращается в 0.
+   Минус у полуфабриката — след продаж: сырьё по нему уже списано при продаже, а производство спишет его второй раз.
+   Поэтому перед производством такие минусы обнуляем инвентаризацией (она ничего не раскладывает). */
+const STORE = {id: '152fc4fd-1bfd-4c30-9f92-2465dea75cee', name: 'ИП Жаренков Алексей Александрович'};
+const WD_FROM = '2026-11-27 00:00:00.000';
+type WdLine = {productId: string; productName: string; hasTechSpec: boolean; quantity: number; quantityBefore: number};
+type Preview = {productId: string; productName: string; quantityBefore: number; quantityWithdrawn: number}[];
+const mskNow = (shift = 0) => new Date(Date.now() + 3 * 3600e3 + shift).toISOString().slice(0, 23).replace('T', ' ');
+
+async function newDoc(type: string, comment: string, time: string, user: unknown, source: unknown) {
+  const number = String(await api<string>(`waybills/generate-waybill-number?waybillType=${type}&companyId=${C}`, {method: 'POST'}));
+  return api<{id: string; number: string}>('waybills', {method: 'POST', body: {
+    waybillTime: time, comment, number, isDefault: true, storehouseDestination: STORE, storehouseSource: source,
+    supplier: null, type, status: 'DRAFT', totalSum: 0, egaisWaybillRegId: null, serverTime: null, user}});
+}
+const addLine = (doc: string, productId: string) =>
+  api<{id: string}>(`waybills/${doc}/elements/product/${productId}`, {method: 'POST', body: {productId}});
+
+async function fixWithdrawals() {
+  const [row] = await sql<{value: string}[]>`select value from kv where key = 'sigma_wd_done'`;
+  const done = new Set<string>(row ? JSON.parse(row.value) : []);
+  const r = await api<{waybills: {id: string; number: string; status: string}[]}>('waybills/find?page=0&size=50', {method: 'POST',
+    body: {waybillType: 'WITHDRAW', begin: WD_FROM, end: '2030-12-31 23:59:59.999'}});
+  const save = () => sql`insert into kv (key, value) values ('sigma_wd_done', ${JSON.stringify([...done])})
+    on conflict (key) do update set value = excluded.value`;
+  let user: unknown = null;
+  for (const w of r.waybills.filter((x) => x.status === 'SAVED' && !done.has(x.id))) {
+    const lines = (await api<{content: WdLine[]}>(`waybills/${w.id}/elements?size=500`)).content;
+    const need = lines.filter((l) => l.hasTechSpec)
+      .map((l) => ({id: l.productId, q: Math.round((l.quantity - Math.max(l.quantityBefore, 0)) * 1e4) / 1e4}))
+      .filter((x) => x.q > 0);
+    if (!need.length) {
+      done.add(w.id);
+      await save();
+      continue;
+    }
+    if (!user) {
+      const a = await api<{id: string; email: string; firstName: string; lastName: string}>('rest/1.1/account');
+      user = {id: a.id, email: a.email, fullName: `${a.firstName} ${a.lastName}`.trim()};
+    }
+    const prod = await newDoc('PRODUCE', `Состав к списанию № ${w.number}`, mskNow(1000), user, STORE);
+    try {
+      for (const x of need) {
+        const el = await addLine(prod.id, x.id);
+        await api(`waybills/${prod.id}/elements/${el.id}/quantity`, {method: 'PUT', body: {value: x.q}});
+      }
+      const neg = (await api<Preview>(`waybills/${prod.id}/production-preview`)).filter((x) => x.quantityBefore < 0 && x.quantityWithdrawn < 0);
+      if (neg.length) {
+        const inv = await newDoc('INVENTORY', `Минус полуфабрикатов от продаж, перед списанием № ${w.number}`, mskNow(), user, {id: null, name: null});
+        for (const x of neg) {
+          const el = await addLine(inv.id, x.productId);
+          await api(`waybills/${inv.id}/elements/${el.id}/quantity-after`, {method: 'PUT', body: {value: 0}});
+        }
+        await api(`waybills/${inv.id}/post`, {method: 'POST'});
+      }
+      await api(`waybills/${prod.id}/post`, {method: 'POST'});
+      done.add(w.id);
+      await save();
+      console.log(`списание ${w.number}: производство ${prod.number}, позиций ${need.length}, обнулено пф ${neg.length}`);
+    } catch (e) {
+      await api(`waybills/${prod.id}`, {method: 'DELETE'}).catch(() => {});
+      throw e;
+    }
+  }
+}
+
 /* ── синхронизация ── */
 export type SyncState = {at: number; ok: boolean; error?: string; full?: number; running?: boolean};
 let state: SyncState = {at: 0, ok: false, error: 'Ещё не синхронизировали'};
@@ -322,6 +396,7 @@ export function sync(full = false): Promise<SyncState> {
       await syncOps();
       await syncShifts();
       await syncDetails();
+      await fixWithdrawals().catch((e) => console.error('sigma withdrawals', e));
       if (full || Date.now() - (state.full ?? 0) > 3600e3) {
         await syncStock();
         await syncWaybills();
